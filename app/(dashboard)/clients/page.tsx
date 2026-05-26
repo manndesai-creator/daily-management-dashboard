@@ -1,11 +1,21 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useClients } from "@/lib/db";
-import { Client, CLIENT_COLORS, getClientColor, generateId } from "@/lib/store";
+import { useClients, useTasks } from "@/lib/db";
+import { Client, CLIENT_COLORS, getClientColor, generateId, today, addDays } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, Edit2, Camera, User } from "lucide-react";
+
+const SHORT_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
+
+function getWeekStart(dateStr: string): string {
+  const date = new Date(dateStr + "T00:00:00");
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  return date.toISOString().split("T")[0];
+}
 
 const PLATFORMS = [
   "Instagram", "Facebook", "LinkedIn", "YouTube",
@@ -89,10 +99,15 @@ function ClientAvatar({
 
 export default function ClientsPage() {
   const { clients, addClient, updateClient, deleteClient } = useClients();
+  const { tasks } = useTasks();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const todayStr = today();
+  const weekStart = getWeekStart(todayStr);
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   function togglePlatform(platform: string) {
     setForm((p) => ({
@@ -431,6 +446,62 @@ export default function ClientsPage() {
                       {client.notes}
                     </p>
                   )}
+
+                  {/* Weekly task chart */}
+                  {(() => {
+                    const weekData = weekDays.map((day, i) => {
+                      const dayTasks = tasks.filter(
+                        (t) => t.clientId === client.id && t.date === day
+                      );
+                      return {
+                        label: SHORT_DAYS[i],
+                        isToday: day === todayStr,
+                        total: dayTasks.length,
+                        done: dayTasks.filter((t) => t.completed).length,
+                      };
+                    });
+                    const hasAny = weekData.some((d) => d.total > 0);
+                    if (!hasAny) return null;
+                    const maxCount = Math.max(...weekData.map((d) => d.total), 1);
+                    return (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-[10px] text-muted-foreground mb-1.5">This week</p>
+                        <div className="flex items-end gap-1 h-8">
+                          {weekData.map((d, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                              <div className="w-full flex items-end" style={{ height: 24 }}>
+                                {d.total > 0 ? (
+                                  <div
+                                    className="w-full rounded-t-sm transition-all"
+                                    style={{
+                                      height: `${(d.total / maxCount) * 100}%`,
+                                      minHeight: 4,
+                                      backgroundColor:
+                                        d.done === d.total
+                                          ? "#10b981"
+                                          : d.done > 0
+                                          ? "#f59e0b"
+                                          : "#94a3b8",
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full bg-border rounded-t-sm" style={{ height: 2 }} />
+                                )}
+                              </div>
+                              <span
+                                className={cn(
+                                  "text-[9px] leading-none",
+                                  d.isToday ? "text-primary font-bold" : "text-muted-foreground/50"
+                                )}
+                              >
+                                {d.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );
