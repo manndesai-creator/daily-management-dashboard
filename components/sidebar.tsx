@@ -42,10 +42,10 @@ const navItems = [
     description: "Monthly goals & progress",
   },
   {
-    label: "Resources",
+    label: "Learning",
     href: "/resources",
     icon: BookOpen,
-    description: "Links, videos & workshops",
+    description: "Track what you learn daily",
   },
   {
     label: "Quick Capture",
