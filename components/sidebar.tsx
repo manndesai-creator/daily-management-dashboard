@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,8 @@ import {
   BookOpen,
   Zap,
   Globe2,
+  Menu,
+  X,
 } from "lucide-react";
 
 const navItems = [
@@ -52,11 +55,15 @@ const navItems = [
   },
 ];
 
-export function Sidebar() {
-  const pathname = usePathname();
-
+function NavContent({
+  pathname,
+  onNavClick,
+}: {
+  pathname: string;
+  onNavClick?: () => void;
+}) {
   return (
-    <aside className="w-60 flex-shrink-0 bg-card border-r border-border flex flex-col h-screen sticky top-0">
+    <>
       {/* Brand */}
       <div className="p-5 border-b border-border">
         <div className="flex items-center gap-3">
@@ -67,9 +74,7 @@ export function Sidebar() {
             <p className="font-bold text-foreground text-sm leading-tight truncate">
               Daily Management
             </p>
-            <p className="text-xs text-muted-foreground truncate">
-              Dashboard
-            </p>
+            <p className="text-xs text-muted-foreground truncate">Dashboard</p>
           </div>
         </div>
       </div>
@@ -87,6 +92,7 @@ export function Sidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onNavClick}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors group",
                     isActive
@@ -131,6 +137,69 @@ export function Sidebar() {
           </p>
         </div>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-card border-b border-border flex items-center px-4 gap-3">
+        <button
+          onClick={() => setOpen(true)}
+          className="p-1.5 rounded hover:bg-secondary transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5 text-foreground" />
+        </button>
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+            <Globe2 className="w-3.5 h-3.5 text-primary-foreground" />
+          </div>
+          <p className="font-bold text-foreground text-sm">Daily Management</p>
+        </div>
+      </div>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-60 flex-shrink-0 bg-card border-r border-border flex-col h-screen sticky top-0">
+        <NavContent pathname={pathname} />
+      </aside>
+
+      {/* Mobile backdrop */}
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/50"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <aside
+        className={cn(
+          "md:hidden fixed top-0 left-0 z-50 w-72 h-screen bg-card border-r border-border flex flex-col transition-transform duration-200",
+          open ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+              <Globe2 className="w-3.5 h-3.5 text-primary-foreground" />
+            </div>
+            <p className="font-bold text-foreground text-sm">Daily Management</p>
+          </div>
+          <button
+            onClick={() => setOpen(false)}
+            className="p-1.5 rounded hover:bg-secondary transition-colors"
+          >
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+        <NavContent pathname={pathname} onNavClick={() => setOpen(false)} />
+      </aside>
+    </>
   );
 }
