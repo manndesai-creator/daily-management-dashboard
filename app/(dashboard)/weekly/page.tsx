@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTasks } from "@/lib/db";
+import { useTasks, useResources } from "@/lib/db";
 import { TaskCategory, CATEGORY_META, today, addDays, formatDuration } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 
 const SHORT_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const CATEGORIES: TaskCategory[] = ["client", "learning", "agency", "admin", "personal"];
@@ -29,6 +29,7 @@ function shortDate(dateStr: string): string {
 
 export default function WeeklyPage() {
   const { tasks } = useTasks();
+  const { resources } = useResources();
   const [weekStart, setWeekStart] = useState(() => getWeekStart(today()));
 
   const weekDays = getWeekDays(weekStart);
@@ -111,6 +112,7 @@ export default function WeeklyPage() {
           <div className="grid grid-cols-7 gap-2 min-w-[640px]">
             {weekDays.map((day, i) => {
               const dayTasks = tasksByDate[day];
+              const dayResources = resources.filter((r) => r.pinnedDate === day);
               const isToday = day === todayStr;
               const dayDone = dayTasks.filter((t) => t.completed).length;
 
@@ -177,7 +179,19 @@ export default function WeeklyPage() {
                         </div>
                       );
                     })}
-                    {dayTasks.length === 0 && (
+                    {dayResources.map((resource) => (
+                      <a
+                        key={resource.id}
+                        href={resource.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-start gap-1 p-1.5 rounded text-[10px] leading-snug bg-violet-50 hover:bg-violet-100 transition-colors"
+                      >
+                        <BookOpen className="w-2.5 h-2.5 mt-0.5 flex-shrink-0 text-violet-500" />
+                        <span className="text-violet-700 truncate">{resource.title}</span>
+                      </a>
+                    ))}
+                    {dayTasks.length === 0 && dayResources.length === 0 && (
                       <p className="text-[10px] text-muted-foreground/30 text-center pt-6">—</p>
                     )}
                   </div>
