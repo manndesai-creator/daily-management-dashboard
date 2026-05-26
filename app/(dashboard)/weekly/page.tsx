@@ -70,23 +70,37 @@ export default function WeeklyPage() {
     allWeekTasks.some((t) => t.category === cat)
   );
 
-  // Stacked bar chart: task count per day per category
+  const weekDoneResources = resources.filter(
+    (r) => r.pinnedDate && weekDays.includes(r.pinnedDate) && r.status === "done"
+  );
+  const hasResourceData = weekDoneResources.length > 0;
+
+  // Stacked bar chart: task count per day per category + done resources
   const barData = weekDays.map((day, i) => {
     const dayTasks = tasksByDate[day];
     const entry: Record<string, string | number> = { day: SHORT_DAYS[i] };
     CATEGORIES.forEach((cat) => {
       entry[cat] = dayTasks.filter((t) => t.category === cat).length;
     });
+    entry["resources"] = resources.filter((r) => r.pinnedDate === day && r.status === "done").length;
     return entry;
   });
 
-  // Donut chart: weekly totals per category
+  // Donut chart: weekly totals per category + done resources
   const pieData = categoryBreakdown.map(({ cat, count, minutes }) => ({
     name: CATEGORY_META[cat].label,
     value: count,
     displayValue: minutes > 0 ? formatDuration(minutes) : `${count} tasks`,
     color: CAT_HEX[cat],
   }));
+  if (hasResourceData) {
+    pieData.push({
+      name: "Resources Done",
+      value: weekDoneResources.length,
+      displayValue: `${weekDoneResources.length} done`,
+      color: "#0ea5e9",
+    });
+  }
 
   return (
     <div className="p-6">
@@ -262,7 +276,7 @@ export default function WeeklyPage() {
       </div>
 
       {/* Charts */}
-      {allWeekTasks.length > 0 && (
+      {(allWeekTasks.length > 0 || hasResourceData) && (
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Stacked bar — tasks per day */}
           <div className="bg-card border border-border rounded-lg p-4">
@@ -295,17 +309,18 @@ export default function WeeklyPage() {
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                  formatter={(value) => CATEGORY_META[value as TaskCategory]?.label ?? value}
+                  formatter={(value) =>
+                    value === "resources"
+                      ? "Resources Done"
+                      : CATEGORY_META[value as TaskCategory]?.label ?? value
+                  }
                 />
                 {activeCategories.map((cat) => (
-                  <Bar
-                    key={cat}
-                    dataKey={cat}
-                    name={cat}
-                    stackId="a"
-                    fill={CAT_HEX[cat]}
-                  />
+                  <Bar key={cat} dataKey={cat} name={cat} stackId="a" fill={CAT_HEX[cat]} />
                 ))}
+                {hasResourceData && (
+                  <Bar dataKey="resources" name="resources" stackId="a" fill="#0ea5e9" />
+                )}
               </BarChart>
             </ResponsiveContainer>
           </div>
