@@ -118,12 +118,14 @@ export function useClients() {
     if (updates.platforms !== undefined) db.platforms = updates.platforms;
     if (updates.niche !== undefined) db.niche = updates.niche;
     if (updates.notes !== undefined) db.notes = updates.notes;
-    supabase.from("clients").update(db).eq("id", id);
+    supabase.from("clients").update(db).eq("id", id)
+      .then(({ error }) => { if (error) console.error("updateClient error:", error); });
   }, []);
 
   const deleteClient = useCallback((id: string) => {
     setClients((prev) => prev.filter((c) => c.id !== id));
-    supabase.from("clients").delete().eq("id", id);
+    supabase.from("clients").delete().eq("id", id)
+      .then(({ error }) => { if (error) console.error("deleteClient error:", error); });
   }, []);
 
   return { clients, loading, addClient, updateClient, deleteClient };
@@ -169,12 +171,14 @@ export function useTasks() {
     if (updates.title !== undefined) db.title = updates.title;
     if (updates.notes !== undefined) db.notes = updates.notes ?? null;
     if (updates.duration !== undefined) db.duration = updates.duration ?? null;
-    supabase.from("tasks").update(db).eq("id", id);
+    supabase.from("tasks").update(db).eq("id", id)
+      .then(({ error }) => { if (error) console.error("updateTask error:", error); });
   }, []);
 
   const deleteTask = useCallback((id: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== id));
-    supabase.from("tasks").delete().eq("id", id);
+    supabase.from("tasks").delete().eq("id", id)
+      .then(({ error }) => { if (error) console.error("deleteTask error:", error); });
   }, []);
 
   return { tasks, loading, addTask, updateTask, deleteTask };
