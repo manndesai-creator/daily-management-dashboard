@@ -191,7 +191,7 @@ const INITIAL_POSTS: Post[] = [
   {
     id: "6",
     caption:
-      "Glokal 5th Anniversary — thank-you post highlighting milestones, client wins, and team achievements.",
+      "Varion Media 5th Anniversary — thank-you post highlighting milestones, client wins, and team achievements.",
     type: "Carousel",
     column: "ready",
     scheduledDate: "2026-04-10",
@@ -210,7 +210,7 @@ const INITIAL_POSTS: Post[] = [
   {
     id: "8",
     caption:
-      "Glokal team introduction reel — meet the creative minds behind Jaipur's boldest advertising campaigns.",
+      "Varion Media team introduction reel — meet the creative minds behind Jaipur's boldest advertising campaigns.",
     type: "Reel",
     column: "scheduled",
     scheduledDate: "2026-04-09",
@@ -265,7 +265,7 @@ const INITIAL_POSTS: Post[] = [
   {
     id: "14",
     caption:
-      "Glokal Portfolio Showcase — a carousel of our top 10 campaigns from Q1 2026, from concept to completion.",
+      "Varion Media Portfolio Showcase — a carousel of our top 10 campaigns from Q1 2026, from concept to completion.",
     type: "Carousel",
     column: "published",
     scheduledDate: "2026-03-15",

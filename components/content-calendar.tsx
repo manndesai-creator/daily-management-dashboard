@@ -148,7 +148,7 @@ const INITIAL_POSTS: CalendarPost[] = [
   // ── Instagram ─────────────────────────────────────────────────────────────
   {
     id: "ig-1",
-    title: "Glokal Team Intro Reel",
+    title: "Varion Media Team Intro Reel",
     caption:
       "Introducing the creative minds behind Jaipur's boldest advertising campaigns. Behind-the-scenes footage from our studio, cutting to live campaign installs across Rajasthan. Trending audio, fast cuts, strong hook in first 2 sec.",
     platform: "instagram", type: "Reel",
@@ -242,7 +242,7 @@ const INITIAL_POSTS: CalendarPost[] = [
     id: "li-3",
     title: "Q1 2026 Growth Infographic",
     caption:
-      "Visual summary of Glokal Advertising's Q1 2026 performance — client count, campaign volume, revenue growth, and geographic expansion across Rajasthan. Designed for maximum shareability on LinkedIn.",
+      "Visual summary of Varion Media's Q1 2026 performance — client count, campaign volume, revenue growth, and geographic expansion across Rajasthan. Designed for maximum shareability on LinkedIn.",
     platform: "linkedin", type: "Single Image",
     date: "2026-04-16", time: "11:00", status: "scheduled",
     tags: ["Q1", "growth", "infographic"],
@@ -269,7 +269,7 @@ const INITIAL_POSTS: CalendarPost[] = [
     id: "li-6",
     title: "We're Hiring: Senior Designer",
     caption:
-      "Glokal Advertising is looking for a Senior Graphic Designer to join our Jaipur studio. 3+ years experience in brand and campaign design required. Portfolio-based evaluation. Apply via our website.",
+      "Varion Media is looking for a Senior Graphic Designer to join our Jaipur studio. 3+ years experience in brand and campaign design required. Portfolio-based evaluation. Apply via our website.",
     platform: "linkedin", type: "Single Image",
     date: "2026-04-27", time: "12:00", status: "ready",
     tags: ["hiring", "design", "careers"],

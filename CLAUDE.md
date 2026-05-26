@@ -1,8 +1,8 @@
-# Glokal Dashboard — Project Documentation
+# Varion Media Dashboard — Project Documentation
 
 ## Overview
 
-Content operations dashboard for **Glokal Advertising**, an offline advertising agency based in Jaipur, Rajasthan. Centralizes social media management, content planning, competitor research, news monitoring, and performance analytics in a single dark-themed web app.
+Personal daily-management dashboard for **Varion Media**, a social media / advertising agency based in Jaipur, Rajasthan. Centralizes daily task logging, client management, weekly planning, monthly goals, resource bookmarking, and quick capture. The project folder name "Glokal Dashboard" is historical only — the agency is Varion Media.
 
 ---
 

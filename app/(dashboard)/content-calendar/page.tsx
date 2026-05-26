@@ -16,7 +16,7 @@ const MONTH_OFFSET = 3;
 const MONTH_DAYS = 30;
 
 const events = [
-  { day: 9, title: "Glokal Brand Story", platform: "instagram" },
+  { day: 9, title: "Varion Media Brand Story", platform: "instagram" },
   { day: 11, title: "Client Feature Reel", platform: "instagram" },
   { day: 14, title: "Weekend Campaign", platform: "facebook" },
   { day: 16, title: "Product Launch Post", platform: "instagram" },
