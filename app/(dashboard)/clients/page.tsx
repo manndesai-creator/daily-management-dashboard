@@ -733,23 +733,29 @@ export default function ClientsPage() {
                               ({doneCount}/{ts.length} done)
                             </span>
                           </div>
-                          <ul className="space-y-1 pl-10">
+                          <ul className="space-y-2 pl-10">
                             {ts.map((t) => (
-                              <li
-                                key={t.id}
-                                className={cn(
-                                  "text-sm flex items-center gap-2",
-                                  t.completed && "text-muted-foreground"
-                                )}
-                              >
-                                <span>{t.completed ? "✓" : "○"}</span>
-                                <span className={cn(t.completed && "line-through")}>
-                                  {t.title}
-                                </span>
-                                {t.duration && (
-                                  <span className="text-xs text-muted-foreground">
-                                    · {formatDuration(t.duration)}
+                              <li key={t.id} className="text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      "flex-shrink-0",
+                                      t.completed ? "text-emerald-600" : "text-muted-foreground"
+                                    )}
+                                  >
+                                    {t.completed ? "✓" : "○"}
                                   </span>
+                                  <span className="text-foreground font-medium">{t.title}</span>
+                                  {t.duration && (
+                                    <span className="text-xs text-muted-foreground">
+                                      · {formatDuration(t.duration)}
+                                    </span>
+                                  )}
+                                </div>
+                                {t.notes && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 pl-6 leading-snug">
+                                    {t.notes}
+                                  </p>
                                 )}
                               </li>
                             ))}
