@@ -2,20 +2,12 @@
 
 import { useRef, useState } from "react";
 import { useClients, useTasks } from "@/lib/db";
-import { Client, CLIENT_COLORS, getClientColor, generateId, today, addDays } from "@/lib/store";
+import { Client, CLIENT_COLORS, getClientColor, generateId, today, addDays, getWeekStart } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, Edit2, Camera, User } from "lucide-react";
 
 const SHORT_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
-
-function getWeekStart(dateStr: string): string {
-  const date = new Date(dateStr + "T00:00:00");
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
-  return date.toISOString().split("T")[0];
-}
 
 const PLATFORMS = [
   "Instagram", "Facebook", "LinkedIn", "YouTube",

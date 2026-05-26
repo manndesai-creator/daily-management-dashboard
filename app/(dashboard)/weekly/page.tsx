@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import { useTasks, useResources } from "@/lib/db";
-import { TaskCategory, CATEGORY_META, today, addDays, formatDuration } from "@/lib/store";
+import { TaskCategory, CATEGORY_META, today, addDays, getWeekStart, formatDuration } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 
@@ -21,14 +21,6 @@ const CAT_HEX: Record<TaskCategory, string> = {
   admin: "#f43f5e",
   personal: "#8b5cf6",
 };
-
-function getWeekStart(dateStr: string): string {
-  const date = new Date(dateStr + "T00:00:00");
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
-  return date.toISOString().split("T")[0];
-}
 
 function getWeekDays(weekStart: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));

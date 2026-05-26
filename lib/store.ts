@@ -127,17 +127,26 @@ export function generateId(): string {
   return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 }
 
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+function ymd(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
 export function today(): string {
-  return new Date().toISOString().split("T")[0];
+  return ymd(new Date());
 }
 
 export function currentMonth(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
 }
 
 export function formatDisplayDate(dateStr: string): string {
-  const date = new Date(dateStr + "T00:00:00");
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
   return date.toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
@@ -147,9 +156,19 @@ export function formatDisplayDate(dateStr: string): string {
 }
 
 export function addDays(dateStr: string, days: number): string {
-  const date = new Date(dateStr + "T00:00:00");
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
   date.setDate(date.getDate() + days);
-  return date.toISOString().split("T")[0];
+  return ymd(date);
+}
+
+export function getWeekStart(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  return ymd(date);
 }
 
 export function extractYouTubeId(url: string): string | null {

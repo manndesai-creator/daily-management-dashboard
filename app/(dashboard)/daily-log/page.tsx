@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, CartesianGrid,
@@ -18,6 +18,7 @@ import {
   today,
   formatDisplayDate,
   addDays,
+  getWeekStart,
   formatDuration,
   extractYouTubeId,
 } from "@/lib/store";
@@ -38,14 +39,6 @@ const SHORT_WEEK = ["M", "T", "W", "T", "F", "S", "S"];
 
 const INPUT_CLS =
   "w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
-
-function getWeekStart(dateStr: string): string {
-  const date = new Date(dateStr + "T00:00:00");
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
-  return date.toISOString().split("T")[0];
-}
 
 function TaskAvatar({ task, client }: { task: Task; client?: Client }) {
   if (task.category === "client" && client) {
@@ -158,6 +151,7 @@ function ResourceAvatar({ resource }: { resource: Resource }) {
 
 function DailyLogContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const dateParam = searchParams.get("date");
 
   const { tasks, addTask, updateTask, deleteTask } = useTasks();
@@ -165,6 +159,15 @@ function DailyLogContent() {
   const { resources, updateResource } = useResources();
 
   const [currentDate, setCurrentDate] = useState(dateParam || today());
+
+  // After honouring an inbound ?date= param, drop it from the URL so a reload
+  // returns to today instead of being stuck on the deep-linked day.
+  useEffect(() => {
+    if (dateParam) {
+      router.replace("/daily-log");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [activeFilter, setActiveFilter] = useState<TaskCategory | "all">("all");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -210,18 +213,27 @@ function DailyLogContent() {
   const doneTasks = dateTasks.filter((t) => t.completed).length;
   const totalMinutes = dateTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
 
-  // Weekly stats
+  // Weekly stats — includes pinned resources alongside tasks for a true count.
   const weekStart = getWeekStart(today());
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const weekTasks = visibleTasks.filter((t) => weekDays.includes(t.date));
-  const weekDone = weekTasks.filter((t) => t.completed).length;
-  const weekPending = weekTasks.length - weekDone;
+  const weekResources = resources.filter(
+    (r) => r.pinnedDate && weekDays.includes(r.pinnedDate)
+  );
+  const weekTaskDone = weekTasks.filter((t) => t.completed).length;
+  const weekResourceDone = weekResources.filter((r) => r.status === "done").length;
+  const weekTotal = weekTasks.length + weekResources.length;
+  const weekDone = weekTaskDone + weekResourceDone;
+  const weekPending = weekTotal - weekDone;
   const dailyProgress = weekDays.map((day, i) => {
     const dayT = visibleTasks.filter((t) => t.date === day);
+    const dayR = resources.filter((r) => r.pinnedDate === day);
     return {
       day: SHORT_WEEK[i],
-      done: dayT.filter((t) => t.completed).length,
-      total: dayT.length,
+      done:
+        dayT.filter((t) => t.completed).length +
+        dayR.filter((r) => r.status === "done").length,
+      total: dayT.length + dayR.length,
       isToday: day === today(),
     };
   });
@@ -860,7 +872,7 @@ function DailyLogContent() {
             </h3>
             <div className="grid grid-cols-3 gap-2 mb-3">
               <div>
-                <p className="text-lg font-bold text-foreground">{weekTasks.length}</p>
+                <p className="text-lg font-bold text-foreground">{weekTotal}</p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</p>
               </div>
               <div>
@@ -909,7 +921,7 @@ function DailyLogContent() {
             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
               Daily Progress
             </h3>
-            {weekTasks.length > 0 ? (
+            {weekTotal > 0 ? (
               <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={dailyProgress} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
                   <CartesianGrid stroke="hsl(240 5% 90%)" strokeDasharray="2 2" vertical={false} />
