@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
+  ResponsiveContainer, PieChart, Pie, Cell,
+} from "recharts";
 import { useTasks, useResources } from "@/lib/db";
 import { TaskCategory, CATEGORY_META, today, addDays, formatDuration } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -9,6 +13,14 @@ import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 
 const SHORT_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const CATEGORIES: TaskCategory[] = ["client", "learning", "agency", "admin", "personal"];
+
+const CAT_HEX: Record<TaskCategory, string> = {
+  client: "#3b82f6",
+  learning: "#10b981",
+  agency: "#f59e0b",
+  admin: "#f43f5e",
+  personal: "#8b5cf6",
+};
 
 function getWeekStart(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
@@ -54,7 +66,27 @@ export default function WeeklyPage() {
     };
   }).filter((c) => c.count > 0);
 
-  const maxMinutes = Math.max(...categoryBreakdown.map((c) => c.minutes), 1);
+  const activeCategories = CATEGORIES.filter((cat) =>
+    allWeekTasks.some((t) => t.category === cat)
+  );
+
+  // Stacked bar chart: task count per day per category
+  const barData = weekDays.map((day, i) => {
+    const dayTasks = tasksByDate[day];
+    const entry: Record<string, string | number> = { day: SHORT_DAYS[i] };
+    CATEGORIES.forEach((cat) => {
+      entry[cat] = dayTasks.filter((t) => t.category === cat).length;
+    });
+    return entry;
+  });
+
+  // Donut chart: weekly totals per category
+  const pieData = categoryBreakdown.map(({ cat, count, minutes }) => ({
+    name: CATEGORY_META[cat].label,
+    value: count,
+    displayValue: minutes > 0 ? formatDuration(minutes) : `${count} tasks`,
+    color: CAT_HEX[cat],
+  }));
 
   return (
     <div className="p-6">
@@ -89,7 +121,6 @@ export default function WeeklyPage() {
           </div>
         </div>
 
-        {/* Quick stats */}
         <div className="flex items-center gap-4 text-sm">
           <span className="text-muted-foreground">
             <span className="font-semibold text-foreground">{allWeekTasks.length}</span> tasks
@@ -124,7 +155,6 @@ export default function WeeklyPage() {
                     isToday && "ring-2 ring-primary/25 border-primary/30"
                   )}
                 >
-                  {/* Day header */}
                   <div
                     className={cn(
                       "px-2.5 py-2 border-b",
@@ -154,7 +184,6 @@ export default function WeeklyPage() {
                     )}
                   </div>
 
-                  {/* Tasks */}
                   <div className="p-1.5 flex-1 space-y-1 min-h-28">
                     {dayTasks.map((task) => {
                       const meta = CATEGORY_META[task.category];
@@ -167,12 +196,7 @@ export default function WeeklyPage() {
                             task.completed && "opacity-40"
                           )}
                         >
-                          <div
-                            className={cn(
-                              "w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0",
-                              meta.dot
-                            )}
-                          />
+                          <div className={cn("w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0", meta.dot)} />
                           <span className={cn(meta.color, "truncate", task.completed && "line-through")}>
                             {task.title}
                           </span>
@@ -185,10 +209,15 @@ export default function WeeklyPage() {
                         href={resource.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-start gap-1 p-1.5 rounded text-[10px] leading-snug bg-violet-50 hover:bg-violet-100 transition-colors"
+                        className={cn(
+                          "flex items-start gap-1 p-1.5 rounded text-[10px] leading-snug bg-violet-50 hover:bg-violet-100 transition-colors",
+                          resource.status === "done" && "opacity-40"
+                        )}
                       >
                         <BookOpen className="w-2.5 h-2.5 mt-0.5 flex-shrink-0 text-violet-500" />
-                        <span className="text-violet-700 truncate">{resource.title}</span>
+                        <span className={cn("text-violet-700 truncate", resource.status === "done" && "line-through")}>
+                          {resource.title}
+                        </span>
                       </a>
                     ))}
                     {dayTasks.length === 0 && dayResources.length === 0 && (
@@ -196,7 +225,6 @@ export default function WeeklyPage() {
                     )}
                   </div>
 
-                  {/* Open in daily log */}
                   <Link
                     href={`/daily-log?date=${day}`}
                     className="block text-[10px] text-muted-foreground hover:text-primary text-center py-1.5 border-t hover:bg-secondary/50 transition-colors"
@@ -209,42 +237,9 @@ export default function WeeklyPage() {
           </div>
         </div>
 
-        {/* Summary sidebar */}
-        <div className="w-48 flex-shrink-0 space-y-4">
-          <div className="bg-card border border-border rounded-lg p-4">
-            <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              By Category
-            </h3>
-            {categoryBreakdown.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No tasks logged</p>
-            ) : (
-              <div className="space-y-3">
-                {categoryBreakdown.map(({ cat, minutes, count }) => {
-                  const meta = CATEGORY_META[cat];
-                  return (
-                    <div key={cat}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={cn("text-xs font-medium", meta.color)}>
-                          {meta.label}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">
-                          {minutes ? formatDuration(minutes) : `${count}t`}
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                        <div
-                          className={cn("h-full rounded-full", meta.dot)}
-                          style={{ width: `${(minutes / maxMinutes) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {allWeekTasks.length > 0 && (
+        {/* Completion stat */}
+        {allWeekTasks.length > 0 && (
+          <div className="w-44 flex-shrink-0">
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                 Completion
@@ -262,9 +257,112 @@ export default function WeeklyPage() {
                 />
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* Charts */}
+      {allWeekTasks.length > 0 && (
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Stacked bar — tasks per day */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+              Tasks per Day
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={barData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 11, fill: "hsl(240 5% 55%)" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: "hsl(240 5% 55%)" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    fontSize: 12,
+                    borderRadius: 8,
+                    border: "1px solid hsl(240 5% 15%)",
+                    background: "hsl(240 6% 7%)",
+                    color: "hsl(0 0% 95%)",
+                  }}
+                  cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                  formatter={(value) => CATEGORY_META[value as TaskCategory]?.label ?? value}
+                />
+                {activeCategories.map((cat) => (
+                  <Bar
+                    key={cat}
+                    dataKey={cat}
+                    name={cat}
+                    stackId="a"
+                    fill={CAT_HEX[cat]}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Donut — weekly distribution */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+              Weekly Distribution
+            </h3>
+            <div className="flex items-center gap-6">
+              <ResponsiveContainer width={160} height={160}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={44}
+                    outerRadius={72}
+                    paddingAngle={2}
+                    dataKey="value"
+                    strokeWidth={0}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      fontSize: 12,
+                      borderRadius: 8,
+                      border: "1px solid hsl(240 5% 15%)",
+                      background: "hsl(240 6% 7%)",
+                      color: "hsl(0 0% 95%)",
+                    }}
+                    formatter={(value, name) => [
+                      pieData.find((d) => d.name === name)?.displayValue ?? value,
+                      name,
+                    ]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex-1 space-y-2.5">
+                {pieData.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-2">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: entry.color }}
+                    />
+                    <span className="text-xs text-muted-foreground flex-1">{entry.name}</span>
+                    <span className="text-xs font-semibold text-foreground">{entry.displayValue}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
