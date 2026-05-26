@@ -88,7 +88,8 @@ export function useClients() {
       .from("clients")
       .select("*")
       .order("created_at", { ascending: true })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error("useClients fetch error:", error);
         if (data) setClients(data.map(mapClient));
         setLoading(false);
       });
@@ -105,7 +106,7 @@ export function useClients() {
       niche: client.niche,
       notes: client.notes,
       created_at: client.createdAt,
-    });
+    }).then(({ error }) => { if (error) console.error("addClient error:", error); });
   }, []);
 
   const updateClient = useCallback((id: string, updates: Partial<Client>) => {
@@ -157,7 +158,7 @@ export function useTasks() {
       duration: task.duration ?? null,
       completed: task.completed,
       created_at: task.createdAt,
-    });
+    }).then(({ error }) => { if (error) console.error("addTask error:", error); });
   }, []);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
