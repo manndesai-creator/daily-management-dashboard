@@ -201,24 +201,27 @@ export function useCaptures() {
       content: capture.content,
       processed: capture.processed,
       created_at: capture.createdAt,
-    });
+    }).then(({ error }) => { if (error) console.error("addCapture error:", error); });
   }, []);
 
   const updateCapture = useCallback((id: string, updates: Partial<Capture>) => {
     setCaptures((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
     const db: Record<string, unknown> = {};
     if (updates.processed !== undefined) db.processed = updates.processed;
-    supabase.from("captures").update(db).eq("id", id);
+    supabase.from("captures").update(db).eq("id", id)
+      .then(({ error }) => { if (error) console.error("updateCapture error:", error); });
   }, []);
 
   const deleteCapture = useCallback((id: string) => {
     setCaptures((prev) => prev.filter((c) => c.id !== id));
-    supabase.from("captures").delete().eq("id", id);
+    supabase.from("captures").delete().eq("id", id)
+      .then(({ error }) => { if (error) console.error("deleteCapture error:", error); });
   }, []);
 
   const clearProcessed = useCallback(() => {
     setCaptures((prev) => prev.filter((c) => !c.processed));
-    supabase.from("captures").delete().eq("processed", true);
+    supabase.from("captures").delete().eq("processed", true)
+      .then(({ error }) => { if (error) console.error("clearProcessed error:", error); });
   }, []);
 
   return { captures, loading, addCapture, updateCapture, deleteCapture, clearProcessed };
@@ -253,7 +256,7 @@ export function useResources() {
       notes: resource.notes ?? null,
       pinned_date: resource.pinnedDate ?? null,
       created_at: resource.createdAt,
-    });
+    }).then(({ error }) => { if (error) console.error("addResource error:", error); });
   }, []);
 
   const updateResource = useCallback((id: string, updates: Partial<Resource>) => {
@@ -262,12 +265,14 @@ export function useResources() {
     if (updates.status !== undefined) db.status = updates.status;
     if (updates.title !== undefined) db.title = updates.title;
     if (updates.notes !== undefined) db.notes = updates.notes ?? null;
-    supabase.from("resources").update(db).eq("id", id);
+    supabase.from("resources").update(db).eq("id", id)
+      .then(({ error }) => { if (error) console.error("updateResource error:", error); });
   }, []);
 
   const deleteResource = useCallback((id: string) => {
     setResources((prev) => prev.filter((r) => r.id !== id));
-    supabase.from("resources").delete().eq("id", id);
+    supabase.from("resources").delete().eq("id", id)
+      .then(({ error }) => { if (error) console.error("deleteResource error:", error); });
   }, []);
 
   return { resources, loading, addResource, updateResource, deleteResource };
@@ -298,7 +303,7 @@ export function useGoals() {
       progress: goal.progress,
       notes: goal.notes ?? null,
       created_at: goal.createdAt,
-    });
+    }).then(({ error }) => { if (error) console.error("addGoal error:", error); });
   }, []);
 
   const updateGoal = useCallback((id: string, updates: Partial<Goal>) => {
@@ -307,12 +312,14 @@ export function useGoals() {
     if (updates.progress !== undefined) db.progress = updates.progress;
     if (updates.title !== undefined) db.title = updates.title;
     if (updates.notes !== undefined) db.notes = updates.notes ?? null;
-    supabase.from("goals").update(db).eq("id", id);
+    supabase.from("goals").update(db).eq("id", id)
+      .then(({ error }) => { if (error) console.error("updateGoal error:", error); });
   }, []);
 
   const deleteGoal = useCallback((id: string) => {
     setGoals((prev) => prev.filter((g) => g.id !== id));
-    supabase.from("goals").delete().eq("id", id);
+    supabase.from("goals").delete().eq("id", id)
+      .then(({ error }) => { if (error) console.error("deleteGoal error:", error); });
   }, []);
 
   return { goals, loading, addGoal, updateGoal, deleteGoal };
