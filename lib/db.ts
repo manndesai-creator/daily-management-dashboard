@@ -138,7 +138,8 @@ export function useTasks() {
       .from("tasks")
       .select("*")
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error("useTasks fetch error:", error);
         if (data) setTasks(data.map(mapTask));
         setLoading(false);
       });
@@ -188,7 +189,8 @@ export function useCaptures() {
       .from("captures")
       .select("*")
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error("useCaptures fetch error:", error);
         if (data) setCaptures(data.map(mapCapture));
         setLoading(false);
       });
@@ -236,7 +238,9 @@ export function useResources() {
       .from("resources")
       .select("*")
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error("useResources fetch error:", error);
+        console.log("useResources fetch:", { count: data?.length ?? 0, error });
         if (data) setResources(data.map(mapResource));
         setLoading(false);
       });
@@ -244,6 +248,7 @@ export function useResources() {
 
   const addResource = useCallback((resource: Resource) => {
     setResources((prev) => [resource, ...prev]);
+    console.log("addResource: inserting", resource.id, resource.title);
     supabase.from("resources").insert({
       id: resource.id,
       url: resource.url,
@@ -256,7 +261,10 @@ export function useResources() {
       notes: resource.notes ?? null,
       pinned_date: resource.pinnedDate ?? null,
       created_at: resource.createdAt,
-    }).then(({ error }) => { if (error) console.error("addResource error:", error); });
+    }).then(({ error }) => {
+      if (error) console.error("addResource error:", error);
+      else console.log("addResource: insert OK for", resource.id);
+    });
   }, []);
 
   const updateResource = useCallback((id: string, updates: Partial<Resource>) => {
@@ -287,7 +295,8 @@ export function useGoals() {
       .from("goals")
       .select("*")
       .order("created_at", { ascending: true })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error("useGoals fetch error:", error);
         if (data) setGoals(data.map(mapGoal));
         setLoading(false);
       });
