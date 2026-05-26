@@ -127,7 +127,7 @@ export function Sidebar() {
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
           <p className="text-xs text-muted-foreground truncate">
-            v1.0 · Local storage
+            v1.0 · Supabase
           </p>
         </div>
       </div>
