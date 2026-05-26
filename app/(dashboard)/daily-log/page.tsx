@@ -168,6 +168,20 @@ function DailyLogContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Roll forward to the new day automatically when IST midnight passes,
+  // but only if the user is currently viewing what used to be "today".
+  useEffect(() => {
+    let lastToday = today();
+    const id = setInterval(() => {
+      const t = today();
+      if (t !== lastToday) {
+        setCurrentDate((prev) => (prev === lastToday ? t : prev));
+        lastToday = t;
+      }
+    }, 30000);
+    return () => clearInterval(id);
+  }, []);
   const [activeFilter, setActiveFilter] = useState<TaskCategory | "all">("all");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

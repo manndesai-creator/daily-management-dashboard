@@ -47,42 +47,52 @@ export default function WeeklyPage() {
 
   const allWeekTasks = weekDays.flatMap((d) => tasksByDate[d]);
   const doneTasks = allWeekTasks.filter((t) => t.completed).length;
-  const totalMinutes = allWeekTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
+  const totalMinutes = allWeekTasks
+    .filter((t) => t.completed)
+    .reduce((sum, t) => sum + (t.duration ?? 0), 0);
 
-  const categoryBreakdown = CATEGORIES.map((cat) => {
-    const catTasks = allWeekTasks.filter((t) => t.category === cat);
+  const weekResources = resources.filter(
+    (r) => r.pinnedDate && weekDays.includes(r.pinnedDate)
+  );
+  const weekDoneResources = weekResources.filter((r) => r.status === "done");
+  const hasResourceData = weekDoneResources.length > 0;
+
+  const totalWeekItems = allWeekTasks.length + weekResources.length;
+  const totalDoneItems = doneTasks + weekDoneResources.length;
+
+  // Charts count only completed tasks — uncompleted items stay in the calendar
+  // grid but don't influence the analytics.
+  const completedCategoryBreakdown = CATEGORIES.map((cat) => {
+    const catDone = allWeekTasks.filter((t) => t.category === cat && t.completed);
     return {
       cat,
-      count: catTasks.length,
-      minutes: catTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0),
+      count: catDone.length,
+      minutes: catDone.reduce((sum, t) => sum + (t.duration ?? 0), 0),
     };
   }).filter((c) => c.count > 0);
 
-  const activeCategories = CATEGORIES.filter((cat) =>
-    allWeekTasks.some((t) => t.category === cat)
+  const activeCategoriesDone = CATEGORIES.filter((cat) =>
+    allWeekTasks.some((t) => t.category === cat && t.completed)
   );
 
-  const weekDoneResources = resources.filter(
-    (r) => r.pinnedDate && weekDays.includes(r.pinnedDate) && r.status === "done"
-  );
-  const hasResourceData = weekDoneResources.length > 0;
-
-  // Stacked bar chart: task count per day per category + done resources
+  // Stacked bar: completed tasks per day per category + done resources per day
   const barData = weekDays.map((day, i) => {
     const dayTasks = tasksByDate[day];
     const entry: Record<string, string | number> = { day: SHORT_DAYS[i] };
     CATEGORIES.forEach((cat) => {
-      entry[cat] = dayTasks.filter((t) => t.category === cat).length;
+      entry[cat] = dayTasks.filter((t) => t.category === cat && t.completed).length;
     });
-    entry["resources"] = resources.filter((r) => r.pinnedDate === day && r.status === "done").length;
+    entry["resources"] = resources.filter(
+      (r) => r.pinnedDate === day && r.status === "done"
+    ).length;
     return entry;
   });
 
-  // Donut chart: weekly totals per category + done resources
-  const pieData = categoryBreakdown.map(({ cat, count, minutes }) => ({
+  // Donut: completed-task distribution + done resources
+  const pieData = completedCategoryBreakdown.map(({ cat, count, minutes }) => ({
     name: CATEGORY_META[cat].label,
     value: count,
-    displayValue: minutes > 0 ? formatDuration(minutes) : `${count} tasks`,
+    displayValue: minutes > 0 ? formatDuration(minutes) : `${count} done`,
     color: CAT_HEX[cat],
   }));
   if (hasResourceData) {
@@ -93,6 +103,9 @@ export default function WeeklyPage() {
       color: "#0ea5e9",
     });
   }
+  const hasChartData = pieData.length > 0 || barData.some((d) =>
+    Object.entries(d).some(([k, v]) => k !== "day" && typeof v === "number" && v > 0)
+  );
 
   return (
     <div className="p-6">
@@ -129,10 +142,10 @@ export default function WeeklyPage() {
 
         <div className="flex items-center gap-4 text-sm">
           <span className="text-muted-foreground">
-            <span className="font-semibold text-foreground">{allWeekTasks.length}</span> tasks
+            <span className="font-semibold text-foreground">{totalWeekItems}</span> items
           </span>
           <span className="text-muted-foreground">
-            <span className="font-semibold text-emerald-600">{doneTasks}</span> done
+            <span className="font-semibold text-emerald-600">{totalDoneItems}</span> done
           </span>
           {totalMinutes > 0 && (
             <span className="text-muted-foreground">
@@ -198,12 +211,11 @@ export default function WeeklyPage() {
                           key={task.id}
                           className={cn(
                             "flex items-start gap-1 p-1.5 rounded text-[10px] leading-snug",
-                            meta.bg,
-                            task.completed && "opacity-40"
+                            meta.bg
                           )}
                         >
                           <div className={cn("w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0", meta.dot)} />
-                          <span className={cn(meta.color, "truncate", task.completed && "line-through")}>
+                          <span className={cn(meta.color, "truncate")}>
                             {task.title}
                           </span>
                         </div>
@@ -215,15 +227,10 @@ export default function WeeklyPage() {
                         href={resource.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={cn(
-                          "flex items-start gap-1 p-1.5 rounded text-[10px] leading-snug bg-violet-50 hover:bg-violet-100 transition-colors",
-                          resource.status === "done" && "opacity-40"
-                        )}
+                        className="flex items-start gap-1 p-1.5 rounded text-[10px] leading-snug bg-violet-50 hover:bg-violet-100 transition-colors"
                       >
                         <BookOpen className="w-2.5 h-2.5 mt-0.5 flex-shrink-0 text-violet-500" />
-                        <span className={cn("text-violet-700 truncate", resource.status === "done" && "line-through")}>
-                          {resource.title}
-                        </span>
+                        <span className="text-violet-700 truncate">{resource.title}</span>
                       </a>
                     ))}
                     {dayTasks.length === 0 && dayResources.length === 0 && (
@@ -244,22 +251,22 @@ export default function WeeklyPage() {
         </div>
 
         {/* Completion stat */}
-        {allWeekTasks.length > 0 && (
+        {totalWeekItems > 0 && (
           <div className="w-44 flex-shrink-0">
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                 Completion
               </h3>
               <div className="text-2xl font-bold text-foreground">
-                {Math.round((doneTasks / allWeekTasks.length) * 100)}%
+                {Math.round((totalDoneItems / totalWeekItems) * 100)}%
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {doneTasks} of {allWeekTasks.length} done
+                {totalDoneItems} of {totalWeekItems} done
               </p>
               <div className="mt-2 h-1.5 rounded-full bg-secondary overflow-hidden">
                 <div
                   className="h-full rounded-full bg-emerald-500 transition-all"
-                  style={{ width: `${(doneTasks / allWeekTasks.length) * 100}%` }}
+                  style={{ width: `${(totalDoneItems / totalWeekItems) * 100}%` }}
                 />
               </div>
             </div>
@@ -267,13 +274,13 @@ export default function WeeklyPage() {
         )}
       </div>
 
-      {/* Charts */}
-      {(allWeekTasks.length > 0 || hasResourceData) && (
+      {/* Charts — only completed items contribute */}
+      {hasChartData && (
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Stacked bar — tasks per day */}
           <div className="bg-card border border-border rounded-lg p-4">
             <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-              Tasks per Day
+              Completed per Day
             </h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={barData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -307,7 +314,7 @@ export default function WeeklyPage() {
                       : CATEGORY_META[value as TaskCategory]?.label ?? value
                   }
                 />
-                {activeCategories.map((cat) => (
+                {activeCategoriesDone.map((cat) => (
                   <Bar key={cat} dataKey={cat} name={cat} stackId="a" fill={CAT_HEX[cat]} />
                 ))}
                 {hasResourceData && (
@@ -320,7 +327,7 @@ export default function WeeklyPage() {
           {/* Donut — weekly distribution */}
           <div className="bg-card border border-border rounded-lg p-4">
             <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-              Weekly Distribution
+              Completed Distribution
             </h3>
             <div className="flex items-center gap-6">
               <ResponsiveContainer width={160} height={160}>

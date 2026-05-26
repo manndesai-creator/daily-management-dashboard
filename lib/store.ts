@@ -131,44 +131,50 @@ function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
 
-function ymd(date: Date): string {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-}
+const IST_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 export function today(): string {
-  return ymd(new Date());
+  // Always returns the current calendar date in IST, regardless of the
+  // browser's local timezone. The agency operates in IST so the day rolls
+  // over at IST midnight.
+  return IST_FORMATTER.format(new Date());
 }
 
 export function currentMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  return today().slice(0, 7);
 }
 
 export function formatDisplayDate(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
+  const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
   return date.toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
 export function addDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  date.setDate(date.getDate() + days);
-  return ymd(date);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() + days);
+  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 }
 
 export function getWeekStart(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  const day = date.getDay();
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const day = date.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
-  return ymd(date);
+  date.setUTCDate(date.getUTCDate() + diff);
+  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 }
 
 export function extractYouTubeId(url: string): string | null {
