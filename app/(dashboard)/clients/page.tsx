@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { useClients, useTasks } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import {
   Client,
   CLIENT_COLORS,
@@ -109,7 +110,30 @@ export default function ClientsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [clickedDate, setClickedDate] = useState<string | null>(null);
+  const [tasksColumnMissing, setTasksColumnMissing] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Probe whether the Supabase `clients.tasks` column exists. If not, surface
+  // a banner with the exact SQL so the user can fix it without digging.
+  useEffect(() => {
+    supabase
+      .from("clients")
+      .select("tasks")
+      .limit(1)
+      .then(({ error }) => {
+        if (!error) return;
+        const msg = (error.message || "").toLowerCase();
+        const code = (error as { code?: string }).code;
+        if (code === "42703" || msg.includes("tasks") || msg.includes("column")) {
+          setTasksColumnMissing(true);
+        }
+        console.error("clients.tasks probe error:", error);
+      });
+  }, []);
+
+  const SQL_FIX =
+    "ALTER TABLE clients ADD COLUMN IF NOT EXISTS tasks text[] NOT NULL DEFAULT '{}';";
 
   const todayStr = today();
   const weekStart = getWeekStart(todayStr);
@@ -387,6 +411,40 @@ export default function ClientsPage() {
         </Button>
       </div>
 
+      {/* Banner — tasks column missing in Supabase */}
+      {tasksColumnMissing && (
+        <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm font-semibold text-amber-900">
+            Task tags can&rsquo;t be saved yet
+          </p>
+          <p className="text-xs text-amber-800 mt-1">
+            The <code className="font-mono">tasks</code> column is missing on the
+            Supabase <code className="font-mono">clients</code> table. Run this once in
+            the Supabase SQL editor and reload — your task tags will then persist:
+          </p>
+          <div className="mt-2 flex items-stretch gap-2">
+            <code className="flex-1 p-2 bg-white border border-amber-200 rounded text-[11px] font-mono text-amber-900 overflow-x-auto">
+              {SQL_FIX}
+            </code>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(SQL_FIX);
+                  setCopiedSql(true);
+                  setTimeout(() => setCopiedSql(false), 1500);
+                } catch {
+                  /* ignore */
+                }
+              }}
+              className="px-3 py-2 rounded bg-amber-900 text-amber-50 text-xs font-medium hover:bg-amber-800 transition-colors"
+            >
+              {copiedSql ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* New client form (only when explicitly creating) */}
       {showNewForm && !editingId && (
         <div className="mb-6 p-4 bg-card border border-border rounded-lg shadow-sm">
@@ -496,7 +554,7 @@ export default function ClientsPage() {
                     <p className="text-xs text-muted-foreground mt-3 line-clamp-2">{client.notes}</p>
                   )}
 
-                  {/* Weekly mini chart with hover details — only shows when there are tasks */}
+                  {/* Weekly mini chart with hover details — always visible */}
                   {!isEditing &&
                     (() => {
                       const weekData = weekDays.map((day, i) => {
@@ -514,8 +572,6 @@ export default function ClientsPage() {
                           ),
                         };
                       });
-                      const hasAny = weekData.some((d) => d.total > 0);
-                      if (!hasAny) return null;
                       const maxCount = Math.max(...weekData.map((d) => d.total), 1);
                       return (
                         <div className="mt-3 pt-3 border-t border-border">

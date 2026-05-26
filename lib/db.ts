@@ -123,8 +123,12 @@ export function useClients() {
     if (updates.tasks !== undefined) db.tasks = updates.tasks;
     if (updates.niche !== undefined) db.niche = updates.niche;
     if (updates.notes !== undefined) db.notes = updates.notes;
-    supabase.from("clients").update(db).eq("id", id)
-      .then(({ error }) => { if (error) console.error("updateClient error:", error); });
+    console.log("updateClient sending:", { id, db });
+    supabase.from("clients").update(db).eq("id", id).select()
+      .then(({ data, error }) => {
+        console.log("updateClient response:", { data, error });
+        if (error) console.error("updateClient error:", error);
+      });
   }, []);
 
   const deleteClient = useCallback((id: string) => {
