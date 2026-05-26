@@ -14,6 +14,7 @@ function mapClient(row: any): Client {
     color: row.color,
     image: row.image ?? undefined,
     platforms: row.platforms ?? [],
+    tasks: row.tasks ?? [],
     niche: row.niche ?? "",
     notes: row.notes ?? "",
     createdAt: row.created_at,
@@ -103,6 +104,7 @@ export function useClients() {
       color: client.color,
       image: client.image ?? null,
       platforms: client.platforms,
+      tasks: client.tasks,
       niche: client.niche,
       notes: client.notes,
       created_at: client.createdAt,
@@ -116,6 +118,7 @@ export function useClients() {
     if (updates.color !== undefined) db.color = updates.color;
     if ("image" in updates) db.image = updates.image ?? null;
     if (updates.platforms !== undefined) db.platforms = updates.platforms;
+    if (updates.tasks !== undefined) db.tasks = updates.tasks;
     if (updates.niche !== undefined) db.niche = updates.niche;
     if (updates.notes !== undefined) db.notes = updates.notes;
     supabase.from("clients").update(db).eq("id", id)

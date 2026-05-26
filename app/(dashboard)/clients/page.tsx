@@ -12,6 +12,12 @@ const PLATFORMS = [
   "Twitter/X", "Pinterest", "TikTok", "WhatsApp",
 ];
 
+const CLIENT_TASKS = [
+  "Scripting", "Video Editing", "Graphic Designing", "Comment Automation",
+  "YT Publishing", "SMM", "Strategy", "Content Calendar",
+  "Reel Editing", "Thumbnail Design", "Caption Writing", "Others",
+];
+
 const INPUT_CLS =
   "w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
 
@@ -20,6 +26,7 @@ const emptyForm = {
   color: "blue",
   image: "",
   platforms: [] as string[],
+  tasks: [] as string[],
   niche: "",
   notes: "",
 };
@@ -96,6 +103,15 @@ export default function ClientsPage() {
     }));
   }
 
+  function toggleTask(task: string) {
+    setForm((p) => ({
+      ...p,
+      tasks: p.tasks.includes(task)
+        ? p.tasks.filter((x) => x !== task)
+        : [...p.tasks, task],
+    }));
+  }
+
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -132,6 +148,7 @@ export default function ClientsPage() {
       color: client.color,
       image: client.image ?? "",
       platforms: client.platforms,
+      tasks: client.tasks ?? [],
       niche: client.niche,
       notes: client.notes,
     });
@@ -244,11 +261,12 @@ export default function ClientsPage() {
               {/* Color picker */}
               <div>
                 <p className="text-xs text-muted-foreground mb-2">Client color</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {CLIENT_COLORS.map((c) => (
                     <button
                       key={c.name}
                       onClick={() => setForm((p) => ({ ...p, color: c.name }))}
+                      title={c.name}
                       className={cn(
                         "w-6 h-6 rounded-full transition-transform",
                         c.bg,
@@ -276,6 +294,27 @@ export default function ClientsPage() {
                       )}
                     >
                       {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tasks */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Tasks</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {CLIENT_TASKS.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => toggleTask(t)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                        form.tasks.includes(t)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {t}
                     </button>
                   ))}
                 </div>
@@ -369,6 +408,19 @@ export default function ClientsPage() {
                           )}
                         >
                           {p}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {client.tasks?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {client.tasks.map((t) => (
+                        <span
+                          key={t}
+                          className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-secondary text-muted-foreground"
+                        >
+                          {t}
                         </span>
                       ))}
                     </div>
