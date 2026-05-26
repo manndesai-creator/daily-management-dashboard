@@ -1,20 +1,44 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "./supabase";
 import { Client, Task, Capture, Resource, Goal } from "./store";
 
 // ─── Row → TypeScript mappers ──────────────────────────────────────────────
 
+// Tasks are stored alongside platforms in the existing `platforms` text[]
+// column with this prefix, so we don't need a separate column in Supabase.
+const TASK_PREFIX = "@task:";
+
+function unpackPlatforms(raw: unknown): { platforms: string[]; tasks: string[] } {
+  const arr = Array.isArray(raw) ? (raw as string[]) : [];
+  const platforms: string[] = [];
+  const tasks: string[] = [];
+  for (const entry of arr) {
+    if (typeof entry !== "string") continue;
+    if (entry.startsWith(TASK_PREFIX)) {
+      tasks.push(entry.slice(TASK_PREFIX.length));
+    } else {
+      platforms.push(entry);
+    }
+  }
+  return { platforms, tasks };
+}
+
+function packPlatforms(platforms: string[], tasks: string[]): string[] {
+  return [...platforms, ...tasks.map((t) => `${TASK_PREFIX}${t}`)];
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapClient(row: any): Client {
+  const { platforms, tasks } = unpackPlatforms(row.platforms);
   return {
     id: row.id,
     name: row.name,
     color: row.color,
     image: row.image ?? undefined,
-    platforms: row.platforms ?? [],
-    tasks: row.tasks ?? [],
+    platforms,
+    tasks,
     niche: row.niche ?? "",
     notes: row.notes ?? "",
     createdAt: row.created_at,
@@ -85,6 +109,11 @@ function mapGoal(row: any): Goal {
 export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const clientsRef = useRef<Client[]>([]);
+
+  useEffect(() => {
+    clientsRef.current = clients;
+  }, [clients]);
 
   useEffect(() => {
     supabase
@@ -105,8 +134,7 @@ export function useClients() {
       name: client.name,
       color: client.color,
       image: client.image ?? null,
-      platforms: client.platforms,
-      tasks: client.tasks,
+      platforms: packPlatforms(client.platforms, client.tasks),
       niche: client.niche,
       notes: client.notes,
       created_at: client.createdAt,
@@ -114,21 +142,23 @@ export function useClients() {
   }, []);
 
   const updateClient = useCallback((id: string, updates: Partial<Client>) => {
-    setClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+    const current = clientsRef.current.find((c) => c.id === id);
+    if (!current) return;
+    const merged: Client = { ...current, ...updates };
+    setClients((prev) => prev.map((c) => (c.id === id ? merged : c)));
+
     const db: Record<string, unknown> = {};
     if (updates.name !== undefined) db.name = updates.name;
     if (updates.color !== undefined) db.color = updates.color;
     if ("image" in updates) db.image = updates.image ?? null;
-    if (updates.platforms !== undefined) db.platforms = updates.platforms;
-    if (updates.tasks !== undefined) db.tasks = updates.tasks;
+    if (updates.platforms !== undefined || updates.tasks !== undefined) {
+      db.platforms = packPlatforms(merged.platforms, merged.tasks);
+    }
     if (updates.niche !== undefined) db.niche = updates.niche;
     if (updates.notes !== undefined) db.notes = updates.notes;
-    console.log("updateClient sending:", { id, db });
-    supabase.from("clients").update(db).eq("id", id).select()
-      .then(({ data, error }) => {
-        console.log("updateClient response:", { data, error });
-        if (error) console.error("updateClient error:", error);
-      });
+
+    supabase.from("clients").update(db).eq("id", id)
+      .then(({ error }) => { if (error) console.error("updateClient error:", error); });
   }, []);
 
   const deleteClient = useCallback((id: string) => {
