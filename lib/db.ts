@@ -177,6 +177,11 @@ export function useTasks() {
     if (updates.notes !== undefined) db.notes = updates.notes ?? null;
     if (updates.duration !== undefined) db.duration = updates.duration ?? null;
     if (updates.url !== undefined) db.url = updates.url ?? null;
+    if (updates.category !== undefined) db.category = updates.category;
+    if (updates.clientId !== undefined) db.client_id = updates.clientId ?? null;
+    if (updates.clientName !== undefined) db.client_name = updates.clientName ?? null;
+    if (updates.learningType !== undefined) db.learning_type = updates.learningType ?? null;
+    if (updates.date !== undefined) db.date = updates.date;
     supabase.from("tasks").update(db).eq("id", id)
       .then(({ error }) => { if (error) console.error("updateTask error:", error); });
   }, []);

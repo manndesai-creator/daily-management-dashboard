@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTasks, useClients } from "@/lib/db";
 import {
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import {
   Plus, ChevronLeft, ChevronRight, Check, Trash2, Clock,
   Globe2, Briefcase, Heart, BookOpen, ExternalLink, Link as LinkIcon,
+  Edit2, Calendar as CalendarIcon,
 } from "lucide-react";
 
 function TaskAvatar({ task, client }: { task: Task; client?: Client }) {
@@ -126,6 +127,20 @@ function DailyLogContent() {
   const [currentDate, setCurrentDate] = useState(dateParam || today());
   const [activeFilter, setActiveFilter] = useState<TaskCategory | "all">("all");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  function openDatePicker() {
+    const el = dateInputRef.current;
+    if (!el) return;
+    const anyEl = el as HTMLInputElement & { showPicker?: () => void };
+    if (typeof anyEl.showPicker === "function") {
+      anyEl.showPicker();
+    } else {
+      el.focus();
+      el.click();
+    }
+  }
 
   const emptyForm = {
     title: "",
@@ -146,12 +161,10 @@ function DailyLogContent() {
   const doneTasks = dateTasks.filter((t) => t.completed).length;
   const totalMinutes = dateTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
 
-  function handleAddTask() {
+  function handleSaveTask() {
     if (!form.title.trim()) return;
     const client = clients.find((c) => c.id === form.clientId);
-    const newTask: Task = {
-      id: generateId(),
-      date: currentDate,
+    const payload = {
       category: form.category,
       clientId: form.category === "client" ? form.clientId || undefined : undefined,
       clientName: form.category === "client" ? client?.name || undefined : undefined,
@@ -160,12 +173,43 @@ function DailyLogContent() {
       title: form.title.trim(),
       notes: form.notes.trim() || undefined,
       duration: form.duration ? parseInt(form.duration) : undefined,
-      completed: false,
-      createdAt: new Date().toISOString(),
     };
-    addTask(newTask);
+
+    if (editingId) {
+      updateTask(editingId, payload);
+      setEditingId(null);
+    } else {
+      const newTask: Task = {
+        id: generateId(),
+        date: currentDate,
+        ...payload,
+        completed: false,
+        createdAt: new Date().toISOString(),
+      };
+      addTask(newTask);
+    }
     setForm(emptyForm);
     setShowForm(false);
+  }
+
+  function handleEditTask(task: Task) {
+    setForm({
+      title: task.title,
+      category: task.category,
+      clientId: task.clientId ?? "",
+      learningType: task.learningType ?? "",
+      url: task.url ?? "",
+      duration: task.duration ? String(task.duration) : "",
+      notes: task.notes ?? "",
+    });
+    setEditingId(task.id);
+    setShowForm(true);
+  }
+
+  function handleCancelForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
   }
 
   function toggleTask(id: string) {
@@ -186,25 +230,32 @@ function DailyLogContent() {
           <h1 className="text-2xl font-bold text-foreground">Daily Log</h1>
           <div className="flex items-center gap-1.5 mt-1">
             <button
+              type="button"
               onClick={() => setCurrentDate(addDays(currentDate, -1))}
               className="p-1.5 rounded hover:bg-secondary transition-colors"
               aria-label="Previous day"
             >
               <ChevronLeft className="w-5 h-5 text-muted-foreground" />
             </button>
-            <div className="relative">
-              <span className="text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
-                {formatDisplayDate(currentDate)}
-              </span>
-              <input
-                type="date"
-                value={currentDate}
-                onChange={(e) => e.target.value && setCurrentDate(e.target.value)}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full"
-                aria-label="Pick a date"
-              />
-            </div>
             <button
+              type="button"
+              onClick={openDatePicker}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-secondary transition-colors"
+            >
+              <CalendarIcon className="w-3.5 h-3.5" />
+              {formatDisplayDate(currentDate)}
+            </button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={currentDate}
+              onChange={(e) => e.target.value && setCurrentDate(e.target.value)}
+              className="sr-only"
+              aria-label="Pick a date"
+              tabIndex={-1}
+            />
+            <button
+              type="button"
               onClick={() => setCurrentDate(addDays(currentDate, 1))}
               className="p-1.5 rounded hover:bg-secondary transition-colors"
               aria-label="Next day"
@@ -213,6 +264,7 @@ function DailyLogContent() {
             </button>
             {!isToday && (
               <button
+                type="button"
                 onClick={() => setCurrentDate(today())}
                 className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium hover:bg-primary/20 transition-colors"
               >
@@ -221,7 +273,18 @@ function DailyLogContent() {
             )}
           </div>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} size="sm">
+        <Button
+          onClick={() => {
+            if (showForm) {
+              handleCancelForm();
+            } else {
+              setEditingId(null);
+              setForm(emptyForm);
+              setShowForm(true);
+            }
+          }}
+          size="sm"
+        >
           <Plus className="w-4 h-4 mr-1" />
           Add Task
         </Button>
@@ -253,9 +316,12 @@ function DailyLogContent() {
         )}
       </div>
 
-      {/* Add task form */}
+      {/* Add / edit task form */}
       {showForm && (
         <div className="mb-5 p-4 bg-card border border-border rounded-lg shadow-sm">
+          <h3 className="text-sm font-semibold mb-3">
+            {editingId ? "Edit Task" : "New Task"}
+          </h3>
           <div className="space-y-3">
             <input
               autoFocus
@@ -264,8 +330,8 @@ function DailyLogContent() {
               value={form.title}
               onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddTask();
-                if (e.key === "Escape") setShowForm(false);
+                if (e.key === "Enter") handleSaveTask();
+                if (e.key === "Escape") handleCancelForm();
               }}
               className={INPUT_CLS}
             />
@@ -361,10 +427,10 @@ function DailyLogContent() {
             />
 
             <div className="flex gap-2">
-              <Button onClick={handleAddTask} size="sm">
-                Add Task
+              <Button onClick={handleSaveTask} size="sm">
+                {editingId ? "Save Changes" : "Add Task"}
               </Button>
-              <Button onClick={() => setShowForm(false)} variant="outline" size="sm">
+              <Button onClick={handleCancelForm} variant="outline" size="sm">
                 Cancel
               </Button>
             </div>
@@ -489,12 +555,22 @@ function DailyLogContent() {
                       {formatDuration(task.duration)}
                     </span>
                   )}
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground transition-all"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <button
+                      onClick={() => handleEditTask(task)}
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Edit task"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground transition-colors"
+                      aria-label="Delete task"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
