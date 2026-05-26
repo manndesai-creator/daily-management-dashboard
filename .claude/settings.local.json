@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "PowerShell(*)",
       "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
       "Bash(npm --version)",
       "Read(//usr/local/**)",
@@ -13,12 +14,14 @@
       "Bash(cmd.exe /c \"where node\")",
       "Bash(powershell.exe -Command \"node --version; npm --version; npx --version\")",
       "Bash(npx tsc *)",
-      "PowerShell(Rename-Item -Path \"C:\\\\Users\\\\mann\\\\Desktop\\\\Glokal Dashboard\" -NewName \"Daily Management Dashboard\")",
       "Bash(git init *)",
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git branch *)",
-      "Bash(git remote *)"
+      "Bash(git remote *)",
+      "Bash(git config *)",
+      "Bash(git push *)",
+      "Bash(npm install *)"
     ]
   }
 }

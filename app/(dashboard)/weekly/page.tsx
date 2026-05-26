@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 
 const SHORT_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const CATEGORIES: TaskCategory[] = ["client", "learning", "agency", "admin", "personal"];
+const CATEGORIES: TaskCategory[] = ["client", "learning", "agency", "personal"];
 
 const CAT_HEX: Record<TaskCategory, string> = {
   client: "#3b82f6",

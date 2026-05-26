@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
-const CATEGORIES: TaskCategory[] = ["client", "learning", "agency", "admin", "personal"];
+const CATEGORIES: TaskCategory[] = ["client", "learning", "agency", "personal"];
 const INPUT_CLS =
   "w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
 
