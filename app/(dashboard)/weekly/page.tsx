@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useLocalStorage } from "@/lib/hooks";
-import { Task, TaskCategory, CATEGORY_META, today, addDays, formatDuration } from "@/lib/store";
+import { useTasks } from "@/lib/db";
+import { TaskCategory, CATEGORY_META, today, addDays, formatDuration } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -28,14 +28,14 @@ function shortDate(dateStr: string): string {
 }
 
 export default function WeeklyPage() {
-  const [tasks] = useLocalStorage<Task[]>("glokal_tasks", []);
+  const { tasks } = useTasks();
   const [weekStart, setWeekStart] = useState(() => getWeekStart(today()));
 
   const weekDays = getWeekDays(weekStart);
   const todayStr = today();
   const isCurrentWeek = weekStart === getWeekStart(todayStr);
 
-  const tasksByDate: Record<string, Task[]> = {};
+  const tasksByDate: Record<string, typeof tasks> = {};
   weekDays.forEach((d) => {
     tasksByDate[d] = tasks.filter((t) => t.date === d);
   });

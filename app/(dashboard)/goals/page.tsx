@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLocalStorage } from "@/lib/hooks";
+import { useGoals } from "@/lib/db";
 import { Goal, TaskCategory, CATEGORY_META, generateId, currentMonth } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ function shiftMonth(yearMonth: string, delta: number): string {
 }
 
 export default function GoalsPage() {
-  const [goals, setGoals] = useLocalStorage<Goal[]>("glokal_goals", []);
+  const { goals, addGoal, updateGoal, deleteGoal } = useGoals();
   const [month, setMonth] = useState(currentMonth());
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -53,17 +53,17 @@ export default function GoalsPage() {
       notes: form.notes.trim() || undefined,
       createdAt: new Date().toISOString(),
     };
-    setGoals((prev) => [...prev, newGoal]);
+    addGoal(newGoal);
     setForm({ title: "", category: "learning", notes: "" });
     setShowForm(false);
   }
 
-  function updateProgress(id: string, progress: number) {
-    setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, progress } : g)));
+  function handleUpdateProgress(id: string, progress: number) {
+    updateGoal(id, { progress });
   }
 
-  function deleteGoal(id: string) {
-    setGoals((prev) => prev.filter((g) => g.id !== id));
+  function handleDeleteGoal(id: string) {
+    deleteGoal(id);
   }
 
   return (
@@ -215,7 +215,7 @@ export default function GoalsPage() {
                           {goal.progress}%
                         </span>
                         <button
-                          onClick={() => deleteGoal(goal.id)}
+                          onClick={() => handleDeleteGoal(goal.id)}
                           className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground transition-all"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -241,7 +241,7 @@ export default function GoalsPage() {
                         max={100}
                         step={5}
                         value={goal.progress}
-                        onChange={(e) => updateProgress(goal.id, Number(e.target.value))}
+                        onChange={(e) => handleUpdateProgress(goal.id, Number(e.target.value))}
                         className="w-full h-1 cursor-pointer accent-current"
                       />
                     </div>

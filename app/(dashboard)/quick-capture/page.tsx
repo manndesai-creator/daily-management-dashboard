@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLocalStorage } from "@/lib/hooks";
+import { useCaptures } from "@/lib/db";
 import { Capture, generateId } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ function formatTime(isoStr: string): string {
 }
 
 export default function QuickCapturePage() {
-  const [captures, setCaptures] = useLocalStorage<Capture[]>("glokal_captures", []);
+  const { captures, addCapture, updateCapture, deleteCapture, clearProcessed } = useCaptures();
   const [input, setInput] = useState("");
   const [filter, setFilter] = useState<"unprocessed" | "processed" | "all">("unprocessed");
 
@@ -29,23 +29,19 @@ export default function QuickCapturePage() {
       createdAt: new Date().toISOString(),
       processed: false,
     };
-    setCaptures((prev) => [newCapture, ...prev]);
+    addCapture(newCapture);
     setInput("");
   }
 
   function toggleProcessed(id: string) {
-    setCaptures((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, processed: !c.processed } : c))
-    );
+    const capture = captures.find((c) => c.id === id);
+    if (!capture) return;
+    updateCapture(id, { processed: !capture.processed });
   }
 
-  function deleteCapture(id: string) {
-    setCaptures((prev) => prev.filter((c) => c.id !== id));
-  }
-
-  function clearProcessed() {
+  function handleClearProcessed() {
     if (confirm("Clear all processed captures?")) {
-      setCaptures((prev) => prev.filter((c) => !c.processed));
+      clearProcessed();
     }
   }
 
@@ -114,7 +110,7 @@ export default function QuickCapturePage() {
         </div>
         {processedCount > 0 && filter === "processed" && (
           <button
-            onClick={clearProcessed}
+            onClick={handleClearProcessed}
             className="text-xs text-rose-600 hover:underline"
           >
             Clear processed

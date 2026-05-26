@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useLocalStorage } from "@/lib/hooks";
+import { useClients } from "@/lib/db";
 import { Client, CLIENT_COLORS, getClientColor, generateId } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -81,7 +81,7 @@ function ClientAvatar({
 }
 
 export default function ClientsPage() {
-  const [clients, setClients] = useLocalStorage<Client[]>("glokal_clients", []);
+  const { clients, addClient, updateClient, deleteClient } = useClients();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -110,11 +110,7 @@ export default function ClientsPage() {
   function handleSave() {
     if (!form.name.trim()) return;
     if (editingId) {
-      setClients((prev) =>
-        prev.map((c) =>
-          c.id === editingId ? { ...c, ...form, name: form.name.trim() } : c
-        )
-      );
+      updateClient(editingId, { ...form, name: form.name.trim(), image: form.image || undefined });
       setEditingId(null);
     } else {
       const newClient: Client = {
@@ -124,7 +120,7 @@ export default function ClientsPage() {
         image: form.image || undefined,
         createdAt: new Date().toISOString(),
       };
-      setClients((prev) => [...prev, newClient]);
+      addClient(newClient);
     }
     setForm(emptyForm);
     setShowForm(false);
@@ -145,7 +141,7 @@ export default function ClientsPage() {
 
   function handleDelete(id: string) {
     if (confirm("Delete this client? This won't delete their logged tasks.")) {
-      setClients((prev) => prev.filter((c) => c.id !== id));
+      deleteClient(id);
     }
   }
 

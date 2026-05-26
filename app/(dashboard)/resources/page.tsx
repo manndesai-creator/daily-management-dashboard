@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLocalStorage } from "@/lib/hooks";
+import { useResources } from "@/lib/db";
 import { Resource, generateId, extractYouTubeId } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -46,7 +46,7 @@ const emptyForm = {
 };
 
 export default function ResourcesPage() {
-  const [resources, setResources] = useLocalStorage<Resource[]>("glokal_resources", []);
+  const { resources, addResource, updateResource, deleteResource } = useResources();
   const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState<StatusKey | "all">("all");
   const [form, setForm] = useState(emptyForm);
@@ -69,18 +69,18 @@ export default function ResourcesPage() {
       pinnedDate: form.pinnedDate || undefined,
       createdAt: new Date().toISOString(),
     };
-    setResources((prev) => [newResource, ...prev]);
+    addResource(newResource);
     setForm(emptyForm);
     setShowForm(false);
   }
 
-  function updateStatus(id: string, status: StatusKey) {
-    setResources((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  function handleUpdateStatus(id: string, status: StatusKey) {
+    updateResource(id, { status });
   }
 
-  function deleteResource(id: string) {
+  function handleDeleteResource(id: string) {
     if (confirm("Delete this resource?")) {
-      setResources((prev) => prev.filter((r) => r.id !== id));
+      deleteResource(id);
     }
   }
 
@@ -276,7 +276,7 @@ export default function ResourcesPage() {
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                       <button
-                        onClick={() => deleteResource(resource.id)}
+                        onClick={() => handleDeleteResource(resource.id)}
                         className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -313,7 +313,7 @@ export default function ResourcesPage() {
                     ).map(([key, meta]) => (
                       <button
                         key={key}
-                        onClick={() => updateStatus(resource.id, key)}
+                        onClick={() => handleUpdateStatus(resource.id, key)}
                         className={cn(
                           "flex-1 text-[10px] py-1 rounded border font-medium transition-colors",
                           resource.status === key

@@ -1,0 +1,318 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "./supabase";
+import { Client, Task, Capture, Resource, Goal } from "./store";
+
+// ─── Row → TypeScript mappers ──────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapClient(row: any): Client {
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color,
+    image: row.image ?? undefined,
+    platforms: row.platforms ?? [],
+    niche: row.niche ?? "",
+    notes: row.notes ?? "",
+    createdAt: row.created_at,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapTask(row: any): Task {
+  return {
+    id: row.id,
+    date: row.date,
+    category: row.category,
+    clientId: row.client_id ?? undefined,
+    clientName: row.client_name ?? undefined,
+    learningType: row.learning_type ?? undefined,
+    title: row.title,
+    notes: row.notes ?? undefined,
+    duration: row.duration ?? undefined,
+    completed: row.completed,
+    createdAt: row.created_at,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapCapture(row: any): Capture {
+  return {
+    id: row.id,
+    content: row.content,
+    processed: row.processed,
+    createdAt: row.created_at,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapResource(row: any): Resource {
+  return {
+    id: row.id,
+    url: row.url,
+    title: row.title,
+    thumbnail: row.thumbnail ?? undefined,
+    youtubeId: row.youtube_id ?? undefined,
+    resourceType: row.resource_type,
+    status: row.status,
+    category: row.category,
+    notes: row.notes ?? undefined,
+    pinnedDate: row.pinned_date ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapGoal(row: any): Goal {
+  return {
+    id: row.id,
+    title: row.title,
+    category: row.category,
+    month: row.month,
+    progress: row.progress,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+// ─── Hooks ─────────────────────────────────────────────────────────────────
+
+export function useClients() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("clients")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (data) setClients(data.map(mapClient));
+        setLoading(false);
+      });
+  }, []);
+
+  const addClient = useCallback((client: Client) => {
+    setClients((prev) => [...prev, client]);
+    supabase.from("clients").insert({
+      id: client.id,
+      name: client.name,
+      color: client.color,
+      image: client.image ?? null,
+      platforms: client.platforms,
+      niche: client.niche,
+      notes: client.notes,
+      created_at: client.createdAt,
+    });
+  }, []);
+
+  const updateClient = useCallback((id: string, updates: Partial<Client>) => {
+    setClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+    const db: Record<string, unknown> = {};
+    if (updates.name !== undefined) db.name = updates.name;
+    if (updates.color !== undefined) db.color = updates.color;
+    if ("image" in updates) db.image = updates.image ?? null;
+    if (updates.platforms !== undefined) db.platforms = updates.platforms;
+    if (updates.niche !== undefined) db.niche = updates.niche;
+    if (updates.notes !== undefined) db.notes = updates.notes;
+    supabase.from("clients").update(db).eq("id", id);
+  }, []);
+
+  const deleteClient = useCallback((id: string) => {
+    setClients((prev) => prev.filter((c) => c.id !== id));
+    supabase.from("clients").delete().eq("id", id);
+  }, []);
+
+  return { clients, loading, addClient, updateClient, deleteClient };
+}
+
+export function useTasks() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("tasks")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setTasks(data.map(mapTask));
+        setLoading(false);
+      });
+  }, []);
+
+  const addTask = useCallback((task: Task) => {
+    setTasks((prev) => [task, ...prev]);
+    supabase.from("tasks").insert({
+      id: task.id,
+      date: task.date,
+      category: task.category,
+      client_id: task.clientId ?? null,
+      client_name: task.clientName ?? null,
+      learning_type: task.learningType ?? null,
+      title: task.title,
+      notes: task.notes ?? null,
+      duration: task.duration ?? null,
+      completed: task.completed,
+      created_at: task.createdAt,
+    });
+  }, []);
+
+  const updateTask = useCallback((id: string, updates: Partial<Task>) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+    const db: Record<string, unknown> = {};
+    if (updates.completed !== undefined) db.completed = updates.completed;
+    if (updates.title !== undefined) db.title = updates.title;
+    if (updates.notes !== undefined) db.notes = updates.notes ?? null;
+    if (updates.duration !== undefined) db.duration = updates.duration ?? null;
+    supabase.from("tasks").update(db).eq("id", id);
+  }, []);
+
+  const deleteTask = useCallback((id: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    supabase.from("tasks").delete().eq("id", id);
+  }, []);
+
+  return { tasks, loading, addTask, updateTask, deleteTask };
+}
+
+export function useCaptures() {
+  const [captures, setCaptures] = useState<Capture[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("captures")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setCaptures(data.map(mapCapture));
+        setLoading(false);
+      });
+  }, []);
+
+  const addCapture = useCallback((capture: Capture) => {
+    setCaptures((prev) => [capture, ...prev]);
+    supabase.from("captures").insert({
+      id: capture.id,
+      content: capture.content,
+      processed: capture.processed,
+      created_at: capture.createdAt,
+    });
+  }, []);
+
+  const updateCapture = useCallback((id: string, updates: Partial<Capture>) => {
+    setCaptures((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+    const db: Record<string, unknown> = {};
+    if (updates.processed !== undefined) db.processed = updates.processed;
+    supabase.from("captures").update(db).eq("id", id);
+  }, []);
+
+  const deleteCapture = useCallback((id: string) => {
+    setCaptures((prev) => prev.filter((c) => c.id !== id));
+    supabase.from("captures").delete().eq("id", id);
+  }, []);
+
+  const clearProcessed = useCallback(() => {
+    setCaptures((prev) => prev.filter((c) => !c.processed));
+    supabase.from("captures").delete().eq("processed", true);
+  }, []);
+
+  return { captures, loading, addCapture, updateCapture, deleteCapture, clearProcessed };
+}
+
+export function useResources() {
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("resources")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setResources(data.map(mapResource));
+        setLoading(false);
+      });
+  }, []);
+
+  const addResource = useCallback((resource: Resource) => {
+    setResources((prev) => [resource, ...prev]);
+    supabase.from("resources").insert({
+      id: resource.id,
+      url: resource.url,
+      title: resource.title,
+      thumbnail: resource.thumbnail ?? null,
+      youtube_id: resource.youtubeId ?? null,
+      resource_type: resource.resourceType,
+      status: resource.status,
+      category: resource.category,
+      notes: resource.notes ?? null,
+      pinned_date: resource.pinnedDate ?? null,
+      created_at: resource.createdAt,
+    });
+  }, []);
+
+  const updateResource = useCallback((id: string, updates: Partial<Resource>) => {
+    setResources((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
+    const db: Record<string, unknown> = {};
+    if (updates.status !== undefined) db.status = updates.status;
+    if (updates.title !== undefined) db.title = updates.title;
+    if (updates.notes !== undefined) db.notes = updates.notes ?? null;
+    supabase.from("resources").update(db).eq("id", id);
+  }, []);
+
+  const deleteResource = useCallback((id: string) => {
+    setResources((prev) => prev.filter((r) => r.id !== id));
+    supabase.from("resources").delete().eq("id", id);
+  }, []);
+
+  return { resources, loading, addResource, updateResource, deleteResource };
+}
+
+export function useGoals() {
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("goals")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (data) setGoals(data.map(mapGoal));
+        setLoading(false);
+      });
+  }, []);
+
+  const addGoal = useCallback((goal: Goal) => {
+    setGoals((prev) => [...prev, goal]);
+    supabase.from("goals").insert({
+      id: goal.id,
+      title: goal.title,
+      category: goal.category,
+      month: goal.month,
+      progress: goal.progress,
+      notes: goal.notes ?? null,
+      created_at: goal.createdAt,
+    });
+  }, []);
+
+  const updateGoal = useCallback((id: string, updates: Partial<Goal>) => {
+    setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, ...updates } : g)));
+    const db: Record<string, unknown> = {};
+    if (updates.progress !== undefined) db.progress = updates.progress;
+    if (updates.title !== undefined) db.title = updates.title;
+    if (updates.notes !== undefined) db.notes = updates.notes ?? null;
+    supabase.from("goals").update(db).eq("id", id);
+  }, []);
+
+  const deleteGoal = useCallback((id: string) => {
+    setGoals((prev) => prev.filter((g) => g.id !== id));
+    supabase.from("goals").delete().eq("id", id);
+  }, []);
+
+  return { goals, loading, addGoal, updateGoal, deleteGoal };
+}

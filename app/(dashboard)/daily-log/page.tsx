@@ -2,9 +2,8 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useLocalStorage } from "@/lib/hooks";
+import { useTasks, useClients } from "@/lib/db";
 import {
-  Client,
   Task,
   TaskCategory,
   CATEGORY_META,
@@ -31,8 +30,8 @@ function DailyLogContent() {
   const searchParams = useSearchParams();
   const dateParam = searchParams.get("date");
 
-  const [tasks, setTasks] = useLocalStorage<Task[]>("glokal_tasks", []);
-  const [clients] = useLocalStorage<Client[]>("glokal_clients", []);
+  const { tasks, addTask, updateTask, deleteTask } = useTasks();
+  const { clients } = useClients();
 
   const [currentDate, setCurrentDate] = useState(dateParam || today());
   const [activeFilter, setActiveFilter] = useState<TaskCategory | "all">("all");
@@ -72,19 +71,19 @@ function DailyLogContent() {
       completed: false,
       createdAt: new Date().toISOString(),
     };
-    setTasks((prev) => [newTask, ...prev]);
+    addTask(newTask);
     setForm(emptyForm);
     setShowForm(false);
   }
 
   function toggleTask(id: string) {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    updateTask(id, { completed: !task.completed });
   }
 
-  function deleteTask(id: string) {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+  function handleDeleteTask(id: string) {
+    deleteTask(id);
   }
 
   return (
@@ -374,7 +373,7 @@ function DailyLogContent() {
                     </span>
                   )}
                   <button
-                    onClick={() => deleteTask(task.id)}
+                    onClick={() => handleDeleteTask(task.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
