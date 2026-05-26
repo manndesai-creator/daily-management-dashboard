@@ -30,6 +30,7 @@ function mapTask(row: any): Task {
     clientId: row.client_id ?? undefined,
     clientName: row.client_name ?? undefined,
     learningType: row.learning_type ?? undefined,
+    url: row.url ?? undefined,
     title: row.title,
     notes: row.notes ?? undefined,
     duration: row.duration ?? undefined,
@@ -159,6 +160,7 @@ export function useTasks() {
       client_id: task.clientId ?? null,
       client_name: task.clientName ?? null,
       learning_type: task.learningType ?? null,
+      url: task.url ?? null,
       title: task.title,
       notes: task.notes ?? null,
       duration: task.duration ?? null,
@@ -174,6 +176,7 @@ export function useTasks() {
     if (updates.title !== undefined) db.title = updates.title;
     if (updates.notes !== undefined) db.notes = updates.notes ?? null;
     if (updates.duration !== undefined) db.duration = updates.duration ?? null;
+    if (updates.url !== undefined) db.url = updates.url ?? null;
     supabase.from("tasks").update(db).eq("id", id)
       .then(({ error }) => { if (error) console.error("updateTask error:", error); });
   }, []);

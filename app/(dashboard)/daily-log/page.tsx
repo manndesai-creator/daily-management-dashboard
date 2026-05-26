@@ -5,17 +5,107 @@ import { useSearchParams } from "next/navigation";
 import { useTasks, useClients } from "@/lib/db";
 import {
   Task,
+  Client,
   TaskCategory,
   CATEGORY_META,
+  getClientColor,
   generateId,
   today,
   formatDisplayDate,
   addDays,
   formatDuration,
+  extractYouTubeId,
 } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Plus, ChevronLeft, ChevronRight, Check, Trash2, Clock } from "lucide-react";
+import {
+  Plus, ChevronLeft, ChevronRight, Check, Trash2, Clock,
+  Globe2, Briefcase, Heart, BookOpen, ExternalLink, Link as LinkIcon,
+} from "lucide-react";
+
+function TaskAvatar({ task, client }: { task: Task; client?: Client }) {
+  if (task.category === "client" && client) {
+    if (client.image) {
+      return (
+        <img
+          src={client.image}
+          alt={client.name}
+          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+        />
+      );
+    }
+    const colorMeta = getClientColor(client.color);
+    return (
+      <div
+        className={cn(
+          "w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0",
+          colorMeta.bg
+        )}
+      >
+        {client.name.charAt(0).toUpperCase()}
+      </div>
+    );
+  }
+
+  if (task.category === "agency") {
+    return (
+      <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
+        <Globe2 className="w-5 h-5 text-white" />
+      </div>
+    );
+  }
+
+  if (task.category === "learning") {
+    if (task.url) {
+      const ytId = extractYouTubeId(task.url);
+      if (ytId) {
+        return (
+          <a
+            href={task.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-16 h-10 rounded overflow-hidden flex-shrink-0 bg-secondary hover:ring-2 hover:ring-emerald-400 transition-all"
+          >
+            <img
+              src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+              alt={task.title}
+              className="w-full h-full object-cover"
+            />
+          </a>
+        );
+      }
+      return (
+        <a
+          href={task.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 hover:bg-emerald-600 transition-colors"
+        >
+          <ExternalLink className="w-5 h-5 text-white" />
+        </a>
+      );
+    }
+    return (
+      <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+        <BookOpen className="w-5 h-5 text-white" />
+      </div>
+    );
+  }
+
+  if (task.category === "admin") {
+    return (
+      <div className="w-10 h-10 rounded-full bg-rose-500 flex items-center justify-center flex-shrink-0">
+        <Briefcase className="w-5 h-5 text-white" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center flex-shrink-0">
+      <Heart className="w-5 h-5 text-white" />
+    </div>
+  );
+}
 
 const CATEGORIES: TaskCategory[] = ["client", "learning", "agency", "admin", "personal"];
 const LEARNING_TYPES = [
@@ -42,6 +132,7 @@ function DailyLogContent() {
     category: "client" as TaskCategory,
     clientId: "",
     learningType: "",
+    url: "",
     duration: "",
     notes: "",
   };
@@ -65,6 +156,7 @@ function DailyLogContent() {
       clientId: form.category === "client" ? form.clientId || undefined : undefined,
       clientName: form.category === "client" ? client?.name || undefined : undefined,
       learningType: form.category === "learning" ? form.learningType || undefined : undefined,
+      url: form.category === "learning" ? form.url.trim() || undefined : undefined,
       title: form.title.trim(),
       notes: form.notes.trim() || undefined,
       duration: form.duration ? parseInt(form.duration) : undefined,
@@ -95,18 +187,29 @@ function DailyLogContent() {
           <div className="flex items-center gap-1.5 mt-1">
             <button
               onClick={() => setCurrentDate(addDays(currentDate, -1))}
-              className="p-1 rounded hover:bg-secondary transition-colors"
+              className="p-1.5 rounded hover:bg-secondary transition-colors"
+              aria-label="Previous day"
             >
-              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+              <ChevronLeft className="w-5 h-5 text-muted-foreground" />
             </button>
-            <span className="text-sm text-muted-foreground">
-              {formatDisplayDate(currentDate)}
-            </span>
+            <div className="relative">
+              <span className="text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+                {formatDisplayDate(currentDate)}
+              </span>
+              <input
+                type="date"
+                value={currentDate}
+                onChange={(e) => e.target.value && setCurrentDate(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                aria-label="Pick a date"
+              />
+            </div>
             <button
               onClick={() => setCurrentDate(addDays(currentDate, 1))}
-              className="p-1 rounded hover:bg-secondary transition-colors"
+              className="p-1.5 rounded hover:bg-secondary transition-colors"
+              aria-label="Next day"
             >
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
             {!isToday && (
               <button
@@ -223,6 +326,16 @@ function DailyLogContent() {
                       <option key={t} value={t} />
                     ))}
                   </datalist>
+                  <div className="col-span-2 flex items-center gap-2">
+                    <LinkIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <input
+                      type="url"
+                      placeholder="Link (YouTube, article, course…) — optional"
+                      value={form.url}
+                      onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
+                      className={INPUT_CLS}
+                    />
+                  </div>
                 </>
               )}
 
@@ -308,11 +421,12 @@ function DailyLogContent() {
         <div className="space-y-2">
           {filteredTasks.map((task) => {
             const meta = CATEGORY_META[task.category];
+            const taskClient = task.clientId ? clients.find((c) => c.id === task.clientId) : undefined;
             return (
               <div
                 key={task.id}
                 className={cn(
-                  "flex items-start gap-3 p-3 rounded-lg border bg-card transition-opacity group",
+                  "flex items-center gap-3 p-3 rounded-lg border bg-card transition-opacity group",
                   task.completed && "opacity-55"
                 )}
               >
@@ -320,7 +434,7 @@ function DailyLogContent() {
                 <button
                   onClick={() => toggleTask(task.id)}
                   className={cn(
-                    "mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors",
+                    "w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors",
                     task.completed
                       ? "bg-emerald-500 border-emerald-500"
                       : "border-border hover:border-emerald-400"
@@ -328,6 +442,9 @@ function DailyLogContent() {
                 >
                   {task.completed && <Check className="w-2.5 h-2.5 text-white" />}
                 </button>
+
+                {/* Avatar / preview */}
+                <TaskAvatar task={task} client={taskClient} />
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">

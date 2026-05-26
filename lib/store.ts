@@ -19,6 +19,7 @@ export interface Task {
   clientId?: string;
   clientName?: string;
   learningType?: string;
+  url?: string;
   title: string;
   notes?: string;
   duration?: number;
