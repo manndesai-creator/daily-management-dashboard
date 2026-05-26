@@ -101,22 +101,22 @@ export const CATEGORY_META: Record<
 };
 
 export const CLIENT_COLORS = [
-  { name: "blue",    bg: "bg-blue-500",    light: "bg-blue-100",    text: "text-blue-700",    border: "border-blue-200" },
-  { name: "emerald", bg: "bg-emerald-500", light: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-200" },
-  { name: "rose",    bg: "bg-rose-500",    light: "bg-rose-100",    text: "text-rose-700",    border: "border-rose-200" },
-  { name: "amber",   bg: "bg-amber-500",   light: "bg-amber-100",   text: "text-amber-700",   border: "border-amber-200" },
-  { name: "violet",  bg: "bg-violet-500",  light: "bg-violet-100",  text: "text-violet-700",  border: "border-violet-200" },
-  { name: "teal",    bg: "bg-teal-500",    light: "bg-teal-100",    text: "text-teal-700",    border: "border-teal-200" },
-  { name: "orange",  bg: "bg-orange-500",  light: "bg-orange-100",  text: "text-orange-700",  border: "border-orange-200" },
-  { name: "pink",    bg: "bg-pink-500",    light: "bg-pink-100",    text: "text-pink-700",    border: "border-pink-200" },
-  { name: "red",     bg: "bg-red-500",     light: "bg-red-100",     text: "text-red-700",     border: "border-red-200" },
-  { name: "yellow",  bg: "bg-yellow-400",  light: "bg-yellow-100",  text: "text-yellow-700",  border: "border-yellow-200" },
-  { name: "olive",   bg: "bg-lime-700",    light: "bg-lime-100",    text: "text-lime-800",    border: "border-lime-200" },
-  { name: "navy",    bg: "bg-blue-900",    light: "bg-blue-100",    text: "text-blue-900",    border: "border-blue-300" },
-  { name: "brown",   bg: "bg-amber-800",   light: "bg-amber-100",   text: "text-amber-900",   border: "border-amber-300" },
-  { name: "cyan",    bg: "bg-cyan-500",    light: "bg-cyan-100",    text: "text-cyan-700",    border: "border-cyan-200" },
-  { name: "indigo",  bg: "bg-indigo-500",  light: "bg-indigo-100",  text: "text-indigo-700",  border: "border-indigo-200" },
-  { name: "slate",   bg: "bg-slate-500",   light: "bg-slate-100",   text: "text-slate-700",   border: "border-slate-200" },
+  { name: "blue",    bg: "bg-blue-500",    light: "bg-blue-100",    text: "text-blue-700",    border: "border-blue-200",    hex: "#3b82f6" },
+  { name: "emerald", bg: "bg-emerald-500", light: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-200", hex: "#10b981" },
+  { name: "rose",    bg: "bg-rose-500",    light: "bg-rose-100",    text: "text-rose-700",    border: "border-rose-200",    hex: "#f43f5e" },
+  { name: "amber",   bg: "bg-amber-500",   light: "bg-amber-100",   text: "text-amber-700",   border: "border-amber-200",   hex: "#f59e0b" },
+  { name: "violet",  bg: "bg-violet-500",  light: "bg-violet-100",  text: "text-violet-700",  border: "border-violet-200",  hex: "#8b5cf6" },
+  { name: "teal",    bg: "bg-teal-500",    light: "bg-teal-100",    text: "text-teal-700",    border: "border-teal-200",    hex: "#14b8a6" },
+  { name: "orange",  bg: "bg-orange-500",  light: "bg-orange-100",  text: "text-orange-700",  border: "border-orange-200",  hex: "#f97316" },
+  { name: "pink",    bg: "bg-pink-500",    light: "bg-pink-100",    text: "text-pink-700",    border: "border-pink-200",    hex: "#ec4899" },
+  { name: "red",     bg: "bg-red-500",     light: "bg-red-100",     text: "text-red-700",     border: "border-red-200",     hex: "#ef4444" },
+  { name: "yellow",  bg: "bg-yellow-400",  light: "bg-yellow-100",  text: "text-yellow-700",  border: "border-yellow-200",  hex: "#facc15" },
+  { name: "olive",   bg: "bg-lime-700",    light: "bg-lime-100",    text: "text-lime-800",    border: "border-lime-200",    hex: "#4d7c0f" },
+  { name: "navy",    bg: "bg-blue-900",    light: "bg-blue-100",    text: "text-blue-900",    border: "border-blue-300",    hex: "#1e3a8a" },
+  { name: "brown",   bg: "bg-amber-800",   light: "bg-amber-100",   text: "text-amber-900",   border: "border-amber-300",   hex: "#92400e" },
+  { name: "cyan",    bg: "bg-cyan-500",    light: "bg-cyan-100",    text: "text-cyan-700",    border: "border-cyan-200",    hex: "#06b6d4" },
+  { name: "indigo",  bg: "bg-indigo-500",  light: "bg-indigo-100",  text: "text-indigo-700",  border: "border-indigo-200",  hex: "#6366f1" },
+  { name: "slate",   bg: "bg-slate-500",   light: "bg-slate-100",   text: "text-slate-700",   border: "border-slate-200",   hex: "#64748b" },
 ];
 
 export function getClientColor(colorName: string) {
