@@ -12,6 +12,7 @@ import {
   BookOpen,
   Zap,
   Globe2,
+  Building2,
   Menu,
   X,
 } from "lucide-react";
@@ -28,6 +29,12 @@ const navItems = [
     href: "/clients",
     icon: Users,
     description: "Manage client profiles",
+  },
+  {
+    label: "Agency Work",
+    href: "/agency-work",
+    icon: Building2,
+    description: "Track internal Varion tasks",
   },
   {
     label: "Weekly View",

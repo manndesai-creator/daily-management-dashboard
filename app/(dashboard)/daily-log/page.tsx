@@ -13,6 +13,7 @@ import {
   Resource,
   TaskCategory,
   CATEGORY_META,
+  AGENCY_TYPES,
   getClientColor,
   generateId,
   today,
@@ -32,7 +33,6 @@ import {
 
 const CATEGORIES: TaskCategory[] = ["client", "learning", "agency", "personal"];
 const LEARNING_TYPES = ["YouTube", "Webinar", "Book", "PDF", "Document", "AI Tool", "Other"];
-const AGENCY_TYPES = ["Outreach", "Hiring", "Team Management", "SOPs", "Other"];
 const HOUR_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const MINUTE_OPTIONS = [0, 15, 30, 45];
 const SHORT_WEEK = ["M", "T", "W", "T", "F", "S", "S"];

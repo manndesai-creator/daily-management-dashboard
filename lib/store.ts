@@ -187,6 +187,47 @@ export function getWeekStart(dateStr: string): string {
   return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 }
 
+export const AGENCY_TYPES = [
+  "Outreach",
+  "Branding",
+  "Business Management",
+  "Shoots",
+  "Hiring",
+  "Team Management",
+  "SOPs, Skills and Dashboards",
+  "Others",
+];
+
+export const AGENCY_TYPE_HEX: Record<string, string> = {
+  Outreach: "#3b82f6",
+  Branding: "#ec4899",
+  "Business Management": "#6366f1",
+  Shoots: "#f43f5e",
+  Hiring: "#10b981",
+  "Team Management": "#8b5cf6",
+  "SOPs, Skills and Dashboards": "#f59e0b",
+  Others: "#64748b",
+};
+
+export const AGENCY_TYPE_EMOJI: Record<string, string> = {
+  Outreach: "📣",
+  Branding: "🎨",
+  "Business Management": "💼",
+  Shoots: "🎬",
+  Hiring: "👥",
+  "Team Management": "🤝",
+  "SOPs, Skills and Dashboards": "📋",
+  Others: "🔧",
+};
+
+export function normalizeAgencyType(type: string | undefined): string {
+  if (!type) return "Others";
+  if (AGENCY_TYPES.includes(type)) return type;
+  if (type === "Other") return "Others";
+  if (type === "SOPs") return "SOPs, Skills and Dashboards";
+  return "Others";
+}
+
 export function extractYouTubeId(url: string): string | null {
   const pattern =
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
