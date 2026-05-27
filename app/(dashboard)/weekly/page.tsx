@@ -211,28 +211,48 @@ export default function WeeklyPage() {
                           key={task.id}
                           className={cn(
                             "flex items-start gap-1 p-1.5 rounded text-[10px] leading-snug",
-                            meta.bg
+                            meta.bg,
+                            task.completed && "opacity-40"
                           )}
                         >
                           <div className={cn("w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0", meta.dot)} />
-                          <span className={cn(meta.color, "truncate")}>
+                          <span
+                            className={cn(
+                              meta.color,
+                              "truncate",
+                              task.completed && "line-through"
+                            )}
+                          >
                             {task.title}
                           </span>
                         </div>
                       );
                     })}
-                    {dayResources.map((resource) => (
-                      <a
-                        key={resource.id}
-                        href={resource.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-start gap-1 p-1.5 rounded text-[10px] leading-snug bg-violet-50 hover:bg-violet-100 transition-colors"
-                      >
-                        <BookOpen className="w-2.5 h-2.5 mt-0.5 flex-shrink-0 text-violet-500" />
-                        <span className="text-violet-700 truncate">{resource.title}</span>
-                      </a>
-                    ))}
+                    {dayResources.map((resource) => {
+                      const isDone = resource.status === "done";
+                      return (
+                        <a
+                          key={resource.id}
+                          href={resource.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(
+                            "flex items-start gap-1 p-1.5 rounded text-[10px] leading-snug bg-violet-50 hover:bg-violet-100 transition-colors",
+                            isDone && "opacity-40"
+                          )}
+                        >
+                          <BookOpen className="w-2.5 h-2.5 mt-0.5 flex-shrink-0 text-violet-500" />
+                          <span
+                            className={cn(
+                              "text-violet-700 truncate",
+                              isDone && "line-through"
+                            )}
+                          >
+                            {resource.title}
+                          </span>
+                        </a>
+                      );
+                    })}
                     {dayTasks.length === 0 && dayResources.length === 0 && (
                       <p className="text-[10px] text-muted-foreground/30 text-center pt-6">—</p>
                     )}

@@ -532,7 +532,7 @@ export default function QuickCapturePage() {
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Quick Capture</h1>
@@ -566,10 +566,11 @@ export default function QuickCapturePage() {
         ))}
       </div>
 
-      {/* Capture form */}
+      {/* Capture form + Related-to panel */}
+      <div className="mb-6 flex flex-col lg:flex-row gap-4">
       <div
         className={cn(
-          "mb-6 p-4 bg-card border rounded-lg shadow-sm",
+          "flex-1 p-4 bg-card border rounded-lg shadow-sm",
           editingId ? "border-primary/40 ring-2 ring-primary/30" : "border-border"
         )}
       >
@@ -720,104 +721,6 @@ export default function QuickCapturePage() {
           </div>
         )}
 
-        {/* Related-to picker — shared across modes */}
-        <div className="mt-4 pt-3 border-t border-border space-y-2">
-          <p className="text-xs text-muted-foreground">Related to (optional)</p>
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                setRelCat("");
-                setRelVal("");
-              }}
-              className={cn(
-                "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
-                relCat === ""
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-secondary border-border text-muted-foreground hover:text-foreground"
-              )}
-            >
-              None
-            </button>
-            {(Object.keys(RELATED_LABEL) as CaptureRelatedTo[]).map((cat) => {
-              const hex = RELATED_HEX[cat];
-              const active = relCat === cat;
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => {
-                    setRelCat(cat);
-                    setRelVal("");
-                  }}
-                  className={cn(
-                    "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
-                    active ? "border-transparent" : "border-border text-muted-foreground hover:text-foreground"
-                  )}
-                  style={active ? { backgroundColor: `${hex}22`, color: hex } : undefined}
-                >
-                  {RELATED_LABEL[cat]}
-                </button>
-              );
-            })}
-          </div>
-
-          {relCat === "client" && (
-            <select
-              value={relVal}
-              onChange={(e) => setRelVal(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="">Pick a client…</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {relCat === "agency" && (
-            <select
-              value={relVal}
-              onChange={(e) => setRelVal(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="">Pick an agency type…</option>
-              {AGENCY_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {AGENCY_TYPE_EMOJI[t]} {t}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {relCat === "learning" && (
-            <select
-              value={relVal}
-              onChange={(e) => setRelVal(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="">Pick a source…</option>
-              {LEARNING_SOURCES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {relCat === "other" && (
-            <input
-              type="text"
-              placeholder="What is it related to?"
-              value={relVal}
-              onChange={(e) => setRelVal(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          )}
-        </div>
-
         <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
           <span className="text-xs text-muted-foreground">
             {mode === "quick" ? "Ctrl + Enter to capture" : "Click Save when ready"}
@@ -836,6 +739,153 @@ export default function QuickCapturePage() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Right-side Related-to panel */}
+      <aside className="w-full lg:w-64 lg:flex-shrink-0">
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Related to
+            </h3>
+            <span className="text-[10px] text-muted-foreground/70">optional</span>
+          </div>
+
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setRelCat("");
+                setRelVal("");
+              }}
+              className={cn(
+                "w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-left transition-colors",
+                relCat === ""
+                  ? "bg-secondary text-foreground font-medium"
+                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+              <span className="flex-1">No connection</span>
+            </button>
+
+            {(["client", "agency", "learning", "other"] as CaptureRelatedTo[]).map((cat) => {
+              const hex = RELATED_HEX[cat];
+              const active = relCat === cat;
+
+              let display = "";
+              if (active && relVal) {
+                if (cat === "client") {
+                  display = clients.find((c) => c.id === relVal)?.name ?? "";
+                } else if (cat === "agency") {
+                  display = `${AGENCY_TYPE_EMOJI[relVal] ?? ""} ${relVal}`.trim();
+                } else {
+                  display = relVal;
+                }
+              }
+
+              return (
+                <div key={cat}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (relCat === cat) {
+                        setRelCat("");
+                        setRelVal("");
+                      } else {
+                        setRelCat(cat);
+                        setRelVal("");
+                      }
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-left transition-colors border",
+                      active ? "border-transparent" : "border-transparent hover:bg-secondary/60"
+                    )}
+                    style={
+                      active
+                        ? {
+                            backgroundColor: `${hex}1a`,
+                            color: hex,
+                          }
+                        : undefined
+                    }
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: hex }}
+                    />
+                    <span className="flex-1 font-medium">{RELATED_LABEL[cat]}</span>
+                    {active && display && (
+                      <span
+                        className="text-[10px] truncate max-w-[110px] opacity-80"
+                        title={display}
+                      >
+                        {display}
+                      </span>
+                    )}
+                  </button>
+
+                  {active && (
+                    <div className="mt-2 mb-2 pl-2">
+                      {cat === "client" && (
+                        <select
+                          value={relVal}
+                          onChange={(e) => setRelVal(e.target.value)}
+                          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">Pick a client…</option>
+                          {clients.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {cat === "agency" && (
+                        <select
+                          value={relVal}
+                          onChange={(e) => setRelVal(e.target.value)}
+                          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">Pick an agency type…</option>
+                          {AGENCY_TYPES.map((t) => (
+                            <option key={t} value={t}>
+                              {AGENCY_TYPE_EMOJI[t]} {t}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {cat === "learning" && (
+                        <select
+                          value={relVal}
+                          onChange={(e) => setRelVal(e.target.value)}
+                          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">Pick a source…</option>
+                          {LEARNING_SOURCES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {cat === "other" && (
+                        <input
+                          type="text"
+                          placeholder="What is it related to?"
+                          value={relVal}
+                          onChange={(e) => setRelVal(e.target.value)}
+                          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </aside>
       </div>
 
       {/* Filter tabs */}
