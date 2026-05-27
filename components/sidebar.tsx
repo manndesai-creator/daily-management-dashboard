@@ -8,7 +8,6 @@ import {
   ClipboardCheck,
   Users,
   CalendarRange,
-  Target,
   BookOpen,
   Zap,
   Globe2,
@@ -37,22 +36,16 @@ const navItems = [
     description: "Track internal Varion tasks",
   },
   {
-    label: "Weekly View",
-    href: "/weekly",
-    icon: CalendarRange,
-    description: "See your full week",
-  },
-  {
-    label: "Goals",
-    href: "/goals",
-    icon: Target,
-    description: "Monthly goals & progress",
-  },
-  {
     label: "Learning",
     href: "/resources",
     icon: BookOpen,
     description: "Track what you learn daily",
+  },
+  {
+    label: "Weekly View",
+    href: "/weekly",
+    icon: CalendarRange,
+    description: "See your full week",
   },
   {
     label: "Quick Capture",
