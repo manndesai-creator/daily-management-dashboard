@@ -46,6 +46,7 @@ export interface Resource {
   category: string;
   notes?: string;
   pinnedDate?: string;
+  completedAt?: string;
   createdAt: string;
 }
 

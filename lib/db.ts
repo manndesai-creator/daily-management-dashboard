@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "./supabase";
-import { Client, Task, Capture, Resource, Goal } from "./store";
+import { Client, Task, Capture, Resource, Goal, today } from "./store";
 
 // ─── Row → TypeScript mappers ──────────────────────────────────────────────
 
@@ -74,8 +74,33 @@ function mapCapture(row: any): Capture {
   };
 }
 
+// Completion date is piggybacked inside the notes column with a sentinel
+// header so we don't need a new Supabase column. Format:
+//   ##DONE:2026-05-28##\n<real notes>
+const DONE_PREFIX_RE = /^##DONE:(\d{4}-\d{2}-\d{2})##\n?/;
+
+function unpackNotes(stored: string | null | undefined): {
+  notes: string | undefined;
+  completedAt: string | undefined;
+} {
+  if (!stored) return { notes: undefined, completedAt: undefined };
+  const match = stored.match(DONE_PREFIX_RE);
+  if (match) {
+    const rest = stored.slice(match[0].length);
+    return { completedAt: match[1], notes: rest.length > 0 ? rest : undefined };
+  }
+  return { notes: stored, completedAt: undefined };
+}
+
+function packNotes(notes: string | undefined, completedAt: string | undefined): string | null {
+  const n = notes ?? "";
+  if (completedAt) return `##DONE:${completedAt}##\n${n}`;
+  return n.length > 0 ? n : null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapResource(row: any): Resource {
+  const { notes, completedAt } = unpackNotes(row.notes);
   return {
     id: row.id,
     url: row.url,
@@ -85,8 +110,9 @@ function mapResource(row: any): Resource {
     resourceType: row.resource_type,
     status: row.status,
     category: row.category,
-    notes: row.notes ?? undefined,
+    notes,
     pinnedDate: row.pinned_date ?? undefined,
+    completedAt,
     createdAt: row.created_at,
   };
 }
@@ -284,6 +310,11 @@ export function useCaptures() {
 export function useResources() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
+  const resourcesRef = useRef<Resource[]>([]);
+
+  useEffect(() => {
+    resourcesRef.current = resources;
+  }, [resources]);
 
   useEffect(() => {
     supabase
@@ -292,45 +323,68 @@ export function useResources() {
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) console.error("useResources fetch error:", error);
-        console.log("useResources fetch:", { count: data?.length ?? 0, error });
         if (data) setResources(data.map(mapResource));
         setLoading(false);
       });
   }, []);
 
   const addResource = useCallback((resource: Resource) => {
-    setResources((prev) => [resource, ...prev]);
-    console.log("addResource: inserting", resource.id, resource.title);
+    // If the resource is being added already marked as done, stamp completedAt
+    const completedAt =
+      resource.completedAt ?? (resource.status === "done" ? today() : undefined);
+    const finalResource: Resource = { ...resource, completedAt };
+    setResources((prev) => [finalResource, ...prev]);
     supabase.from("resources").insert({
-      id: resource.id,
-      url: resource.url,
-      title: resource.title,
-      thumbnail: resource.thumbnail ?? null,
-      youtube_id: resource.youtubeId ?? null,
-      resource_type: resource.resourceType,
-      status: resource.status,
-      category: resource.category,
-      notes: resource.notes ?? null,
-      pinned_date: resource.pinnedDate ?? null,
-      created_at: resource.createdAt,
-    }).then(({ error }) => {
-      if (error) console.error("addResource error:", error);
-      else console.log("addResource: insert OK for", resource.id);
-    });
+      id: finalResource.id,
+      url: finalResource.url,
+      title: finalResource.title,
+      thumbnail: finalResource.thumbnail ?? null,
+      youtube_id: finalResource.youtubeId ?? null,
+      resource_type: finalResource.resourceType,
+      status: finalResource.status,
+      category: finalResource.category,
+      notes: packNotes(finalResource.notes, finalResource.completedAt),
+      pinned_date: finalResource.pinnedDate ?? null,
+      created_at: finalResource.createdAt,
+    }).then(({ error }) => { if (error) console.error("addResource error:", error); });
   }, []);
 
   const updateResource = useCallback((id: string, updates: Partial<Resource>) => {
-    setResources((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
+    const current = resourcesRef.current.find((r) => r.id === id);
+    if (!current) return;
+
+    // Auto-manage completedAt when status changes, unless caller specifies it
+    let nextCompletedAt = current.completedAt;
+    if ("completedAt" in updates) {
+      nextCompletedAt = updates.completedAt;
+    } else if (updates.status !== undefined) {
+      if (updates.status === "done") {
+        if (!current.completedAt) nextCompletedAt = today();
+      } else {
+        nextCompletedAt = undefined;
+      }
+    }
+
+    const merged: Resource = { ...current, ...updates, completedAt: nextCompletedAt };
+    setResources((prev) => prev.map((r) => (r.id === id ? merged : r)));
+
     const db: Record<string, unknown> = {};
     if (updates.url !== undefined) db.url = updates.url;
     if (updates.title !== undefined) db.title = updates.title;
     if (updates.status !== undefined) db.status = updates.status;
     if (updates.category !== undefined) db.category = updates.category;
-    if (updates.notes !== undefined) db.notes = updates.notes ?? null;
     if ("pinnedDate" in updates) db.pinned_date = updates.pinnedDate ?? null;
     if (updates.thumbnail !== undefined) db.thumbnail = updates.thumbnail ?? null;
     if (updates.youtubeId !== undefined) db.youtube_id = updates.youtubeId ?? null;
     if (updates.resourceType !== undefined) db.resource_type = updates.resourceType;
+
+    // Re-pack notes whenever either notes or completedAt could have changed
+    const notesChanged = "notes" in updates;
+    const completedAtChanged = nextCompletedAt !== current.completedAt;
+    if (notesChanged || completedAtChanged) {
+      db.notes = packNotes(merged.notes, merged.completedAt);
+    }
+
     supabase.from("resources").update(db).eq("id", id)
       .then(({ error }) => { if (error) console.error("updateResource error:", error); });
   }, []);

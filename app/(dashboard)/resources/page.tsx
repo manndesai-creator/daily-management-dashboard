@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Plus, Trash2, ExternalLink, Youtube, FileText, CalendarDays, X, Edit2,
-  BookOpen, Sparkles, Video, Link as LinkIcon, Search,
+  BookOpen, Sparkles, Video, Link as LinkIcon, Search, Check,
 } from "lucide-react";
 
 const RESOURCE_CATEGORIES = [
@@ -258,11 +258,18 @@ export default function LearningPage() {
     (r) => !knownCategorySet.has(r.category)
   ).length;
 
-  // 15-day chart data — also tracks Uncategorised
+  // 15-day chart data — counts only DONE resources on their completion date.
+  // For done resources missing completedAt (legacy), fall back to createdAt.
   const todayStr = today();
   const chartStart = addDays(todayStr, -14);
   const chart15Days = Array.from({ length: 15 }, (_, i) => addDays(chartStart, i));
   const ALL_CATS = [...RESOURCE_CATEGORIES, "Uncategorised"];
+
+  function effectiveDoneDate(r: Resource): string | null {
+    if (r.status !== "done") return null;
+    return r.completedAt ?? r.createdAt.split("T")[0];
+  }
+
   const chartData = chart15Days.map((date) => {
     const [, m, d] = date.split("-");
     const entry: Record<string, string | number> = {
@@ -271,8 +278,8 @@ export default function LearningPage() {
     };
     ALL_CATS.forEach((cat) => {
       entry[cat] = resources.filter((r) => {
-        const created = r.createdAt.split("T")[0];
-        if (created !== date) return false;
+        const doneDate = effectiveDoneDate(r);
+        if (doneDate !== date) return false;
         if (cat === "Uncategorised") return !knownCategorySet.has(r.category);
         return r.category === cat;
       }).length;
@@ -338,7 +345,7 @@ export default function LearningPage() {
 
       <div className="flex items-center gap-2 flex-wrap">
         <label className="text-xs text-muted-foreground whitespace-nowrap">
-          Date (when you learn/watch this):
+          Planned date (when you intend to consume this):
         </label>
         <input
           type="date"
@@ -430,11 +437,28 @@ export default function LearningPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
             {resource.pinnedDate && (
-              <span className="text-[11px] text-violet-600 flex items-center gap-0.5">
+              <span
+                className="text-[11px] text-violet-600 flex items-center gap-0.5"
+                title="Planned date"
+              >
                 <CalendarDays className="w-3 h-3" />
+                Planned{" "}
                 {new Date(resource.pinnedDate + "T00:00:00").toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            )}
+            {resource.completedAt && (
+              <span
+                className="text-[11px] text-emerald-600 flex items-center gap-0.5"
+                title="Date marked done"
+              >
+                <Check className="w-3 h-3" />
+                Done{" "}
+                {new Date(resource.completedAt + "T00:00:00").toLocaleDateString("en-IN", {
                   day: "numeric",
                   month: "short",
                 })}
@@ -683,7 +707,7 @@ export default function LearningPage() {
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-foreground">Last 15 Days</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Resources added per day, by source. Click a bar to see details.
+              Resources marked done per day, by source. Click a bar to see details.
             </p>
           </div>
           <ResponsiveContainer width="100%" height={240}>
@@ -761,7 +785,7 @@ export default function LearningPage() {
             year: "numeric",
           });
           const dayItems = resources.filter(
-            (r) => r.createdAt.split("T")[0] === clickedDate
+            (r) => effectiveDoneDate(r) === clickedDate
           );
           const byCategory = ALL_CATS.map((cat) => ({
             category: cat,
@@ -784,7 +808,7 @@ export default function LearningPage() {
                   <div>
                     <h3 className="text-lg font-bold text-foreground">{formattedDate}</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {dayItems.length} resource{dayItems.length !== 1 ? "s" : ""} added
+                      {dayItems.length} resource{dayItems.length !== 1 ? "s" : ""} marked done
                     </p>
                   </div>
                   <button
