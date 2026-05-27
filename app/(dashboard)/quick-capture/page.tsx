@@ -81,6 +81,7 @@ export default function QuickCapturePage() {
   const { clients } = useClients();
   const [mode, setMode] = useState<CaptureType>("quick");
   const [filter, setFilter] = useState<"inbox" | "ideas" | "reminders" | "processed" | "all">("inbox");
+  const [filterRelated, setFilterRelated] = useState<CaptureRelatedTo | "all">("all");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form state (per-mode)
@@ -205,7 +206,10 @@ export default function QuickCapturePage() {
     }
   }
 
-  const filteredAll = captures;
+  const filteredAll = captures.filter((c) => {
+    if (filterRelated === "all") return true;
+    return c.relatedToCategory === filterRelated;
+  });
 
   const quickItems = filteredAll.filter((c) => c.type === "quick");
   const ideaItems = filteredAll.filter((c) => c.type === "idea");
@@ -714,6 +718,108 @@ export default function QuickCapturePage() {
           </div>
         )}
 
+        {/* Related-to picker — inline in the form for the capture being saved */}
+        <div className="mt-4 pt-3 border-t border-border space-y-2">
+          <p className="text-xs text-muted-foreground">Related to (optional)</p>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setRelCat("");
+                setRelVal("");
+              }}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                relCat === ""
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+              )}
+            >
+              None
+            </button>
+            {(["client", "agency", "learning", "other"] as CaptureRelatedTo[]).map((cat) => {
+              const hex = RELATED_HEX[cat];
+              const active = relCat === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => {
+                    setRelCat(cat);
+                    setRelVal("");
+                  }}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors inline-flex items-center gap-1.5",
+                    active ? "border-transparent" : "border-border text-muted-foreground hover:text-foreground"
+                  )}
+                  style={active ? { backgroundColor: `${hex}22`, color: hex } : undefined}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: hex }}
+                  />
+                  {RELATED_LABEL[cat]}
+                </button>
+              );
+            })}
+          </div>
+
+          {relCat === "client" && (
+            <select
+              value={relVal}
+              onChange={(e) => setRelVal(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">Pick a client…</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {relCat === "agency" && (
+            <select
+              value={relVal}
+              onChange={(e) => setRelVal(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">Pick an agency type…</option>
+              {AGENCY_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {AGENCY_TYPE_EMOJI[t]} {t}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {relCat === "learning" && (
+            <select
+              value={relVal}
+              onChange={(e) => setRelVal(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">Pick a source…</option>
+              {LEARNING_SOURCES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {relCat === "other" && (
+            <input
+              type="text"
+              placeholder="What is it related to?"
+              value={relVal}
+              onChange={(e) => setRelVal(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          )}
+        </div>
+
         <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
           <span className="text-xs text-muted-foreground">
             {mode === "quick" ? "Ctrl + Enter to capture" : "Click Save when ready"}
@@ -734,149 +840,78 @@ export default function QuickCapturePage() {
         </div>
       </div>
 
-      {/* Right-side Related-to panel */}
+      {/* Right-side Search panel — filter the list by Related to */}
       <aside className="w-full lg:w-64 lg:flex-shrink-0">
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Related to
+              Search by related
             </h3>
-            <span className="text-[10px] text-muted-foreground/70">optional</span>
+            {filterRelated !== "all" && (
+              <button
+                type="button"
+                onClick={() => setFilterRelated("all")}
+                className="text-[10px] text-primary hover:underline"
+              >
+                clear
+              </button>
+            )}
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <button
               type="button"
-              onClick={() => {
-                setRelCat("");
-                setRelVal("");
-              }}
+              onClick={() => setFilterRelated("all")}
               className={cn(
-                "w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-left transition-colors",
-                relCat === ""
+                "w-full flex items-center justify-between px-2.5 py-2 rounded-md text-xs text-left transition-colors",
+                filterRelated === "all"
                   ? "bg-secondary text-foreground font-medium"
                   : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
               )}
             >
-              <span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />
-              <span className="flex-1">No connection</span>
+              <span className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                <span className="truncate">All captures</span>
+              </span>
+              <span className="text-[10px] tabular-nums opacity-70">
+                {captures.length}
+              </span>
             </button>
 
             {(["client", "agency", "learning", "other"] as CaptureRelatedTo[]).map((cat) => {
               const hex = RELATED_HEX[cat];
-              const active = relCat === cat;
-
-              let display = "";
-              if (active && relVal) {
-                if (cat === "client") {
-                  display = clients.find((c) => c.id === relVal)?.name ?? "";
-                } else if (cat === "agency") {
-                  display = `${AGENCY_TYPE_EMOJI[relVal] ?? ""} ${relVal}`.trim();
-                } else {
-                  display = relVal;
-                }
-              }
-
+              const active = filterRelated === cat;
+              const count = captures.filter((c) => c.relatedToCategory === cat).length;
               return (
-                <div key={cat}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (relCat === cat) {
-                        setRelCat("");
-                        setRelVal("");
-                      } else {
-                        setRelCat(cat);
-                        setRelVal("");
-                      }
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-left transition-colors border",
-                      active ? "border-transparent" : "border-transparent hover:bg-secondary/60"
-                    )}
-                    style={
-                      active
-                        ? {
-                            backgroundColor: `${hex}1a`,
-                            color: hex,
-                          }
-                        : undefined
-                    }
-                  >
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setFilterRelated(cat)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-2.5 py-2 rounded-md text-xs text-left transition-colors",
+                    active ? "font-medium" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  )}
+                  style={active ? { backgroundColor: `${hex}1a`, color: hex } : undefined}
+                >
+                  <span className="flex items-center gap-2 min-w-0">
                     <span
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: hex }}
                     />
-                    <span className="flex-1 font-medium">{RELATED_LABEL[cat]}</span>
-                    {active && display && (
-                      <span
-                        className="text-[10px] truncate max-w-[110px] opacity-80"
-                        title={display}
-                      >
-                        {display}
-                      </span>
-                    )}
-                  </button>
-
-                  {active && (
-                    <div className="mt-2 mb-2 pl-2">
-                      {cat === "client" && (
-                        <select
-                          value={relVal}
-                          onChange={(e) => setRelVal(e.target.value)}
-                          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <option value="">Pick a client…</option>
-                          {clients.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {cat === "agency" && (
-                        <select
-                          value={relVal}
-                          onChange={(e) => setRelVal(e.target.value)}
-                          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <option value="">Pick an agency type…</option>
-                          {AGENCY_TYPES.map((t) => (
-                            <option key={t} value={t}>
-                              {AGENCY_TYPE_EMOJI[t]} {t}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {cat === "learning" && (
-                        <select
-                          value={relVal}
-                          onChange={(e) => setRelVal(e.target.value)}
-                          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <option value="">Pick a source…</option>
-                          {LEARNING_SOURCES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {cat === "other" && (
-                        <input
-                          type="text"
-                          placeholder="What is it related to?"
-                          value={relVal}
-                          onChange={(e) => setRelVal(e.target.value)}
-                          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                      )}
-                    </div>
-                  )}
-                </div>
+                    <span className="truncate">{RELATED_LABEL[cat]}</span>
+                  </span>
+                  <span className="text-[10px] tabular-nums opacity-70">{count}</span>
+                </button>
               );
             })}
           </div>
+
+          {filterRelated !== "all" && (
+            <p className="text-[10px] text-muted-foreground mt-3 pt-3 border-t border-border">
+              Showing captures connected to{" "}
+              <span className="font-medium">{RELATED_LABEL[filterRelated as CaptureRelatedTo]}</span> only.
+            </p>
+          )}
         </div>
       </aside>
       </div>
