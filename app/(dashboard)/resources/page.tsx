@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Plus, Trash2, ExternalLink, Youtube, FileText, CalendarDays, X, Edit2,
-  BookOpen, Sparkles, Video, Link as LinkIcon,
+  BookOpen, Sparkles, Video, Link as LinkIcon, Search,
 } from "lucide-react";
 
 const RESOURCE_CATEGORIES = [
@@ -144,6 +144,8 @@ export default function LearningPage() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<StatusKey | "all">("all");
+  const [filterCategory, setFilterCategory] = useState<string | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [clickedDate, setClickedDate] = useState<string | null>(null);
 
@@ -160,6 +162,7 @@ export default function LearningPage() {
         category: form.category,
         status: form.status,
         notes: form.notes.trim() || undefined,
+        pinnedDate: form.pinnedDate || undefined,
       });
       setEditingId(null);
     } else {
@@ -222,16 +225,38 @@ export default function LearningPage() {
     }
   }
 
-  const filtered =
-    filterStatus === "all" ? resources : resources.filter((r) => r.status === filterStatus);
+  const knownCategorySet = new Set(RESOURCE_CATEGORIES);
+
+  const q = searchQuery.trim().toLowerCase();
+  const filtered = resources.filter((r) => {
+    if (filterStatus !== "all" && r.status !== filterStatus) return false;
+    if (filterCategory !== "all") {
+      if (filterCategory === "Uncategorised") {
+        if (knownCategorySet.has(r.category)) return false;
+      } else if (r.category !== filterCategory) return false;
+    }
+    if (q) {
+      const hay = `${r.title} ${r.notes ?? ""} ${r.url}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
 
   // Group filtered resources by category
-  const knownCategorySet = new Set(RESOURCE_CATEGORIES);
   const groupedByCategory = RESOURCE_CATEGORIES.map((cat) => ({
     category: cat,
     items: filtered.filter((r) => r.category === cat),
   })).filter((g) => g.items.length > 0);
   const legacyItems = filtered.filter((r) => !knownCategorySet.has(r.category));
+
+  // Counts (across all resources, not filtered) for the sidebar
+  const categoryCounts: Record<string, number> = {};
+  RESOURCE_CATEGORIES.forEach((cat) => {
+    categoryCounts[cat] = resources.filter((r) => r.category === cat).length;
+  });
+  categoryCounts.Uncategorised = resources.filter(
+    (r) => !knownCategorySet.has(r.category)
+  ).length;
 
   // 15-day chart data — also tracks Uncategorised
   const todayStr = today();
@@ -311,19 +336,26 @@ export default function LearningPage() {
         </select>
       </div>
 
-      {!editingId && (
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground whitespace-nowrap">
-            Pin to date (for events/workshops):
-          </label>
-          <input
-            type="date"
-            value={form.pinnedDate}
-            onChange={(e) => setForm((p) => ({ ...p, pinnedDate: e.target.value }))}
-            className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-        </div>
-      )}
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="text-xs text-muted-foreground whitespace-nowrap">
+          Date (when you learn/watch this):
+        </label>
+        <input
+          type="date"
+          value={form.pinnedDate}
+          onChange={(e) => setForm((p) => ({ ...p, pinnedDate: e.target.value }))}
+          className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        {form.pinnedDate && (
+          <button
+            type="button"
+            onClick={() => setForm((p) => ({ ...p, pinnedDate: "" }))}
+            className="text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            clear
+          </button>
+        )}
+      </div>
 
       <textarea
         placeholder="Notes (optional)"
@@ -460,7 +492,7 @@ export default function LearningPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
@@ -474,6 +506,9 @@ export default function LearningPage() {
           Add Resource
         </Button>
       </div>
+
+      <div className="flex gap-6">
+        <div className="flex-1 min-w-0">
 
       {/* New form (only when adding new) */}
       {showNewForm && !editingId && (
@@ -520,13 +555,28 @@ export default function LearningPage() {
       {/* Category-grouped resources */}
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
-          <p className="text-sm">No resources yet.</p>
-          <button
-            onClick={() => setShowNewForm(true)}
-            className="mt-2 text-sm text-primary hover:underline"
-          >
-            Add your first resource
-          </button>
+          <p className="text-sm">
+            {resources.length === 0 ? "No resources yet." : "No matches for the current filter."}
+          </p>
+          {resources.length === 0 ? (
+            <button
+              onClick={() => setShowNewForm(true)}
+              className="mt-2 text-sm text-primary hover:underline"
+            >
+              Add your first resource
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setFilterCategory("all");
+                setFilterStatus("all");
+                setSearchQuery("");
+              }}
+              className="mt-2 text-sm text-primary hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -534,6 +584,98 @@ export default function LearningPage() {
           {legacyItems.length > 0 && renderCategorySection("Uncategorised", legacyItems)}
         </>
       )}
+
+        </div>
+
+        {/* Right sidebar — search + category filter */}
+        <aside className="w-60 flex-shrink-0 hidden lg:block">
+          <div className="bg-card border border-border rounded-lg p-4 sticky top-6">
+            <div className="relative mb-4">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search title, notes…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-md border border-border bg-background pl-8 pr-2 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              Sources
+            </h3>
+            <button
+              type="button"
+              onClick={() => setFilterCategory("all")}
+              className={cn(
+                "w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-colors mb-1",
+                filterCategory === "all"
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+              )}
+            >
+              <span>All</span>
+              <span className="text-[10px] tabular-nums">{resources.length}</span>
+            </button>
+            {RESOURCE_CATEGORIES.map((cat) => {
+              const count = categoryCounts[cat] ?? 0;
+              const isActive = filterCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setFilterCategory(cat)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  )}
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: categoryHex(cat) }}
+                    />
+                    <span className="truncate">{cat}</span>
+                  </span>
+                  <span className="text-[10px] tabular-nums">{count}</span>
+                </button>
+              );
+            })}
+            {categoryCounts.Uncategorised > 0 && (
+              <button
+                type="button"
+                onClick={() => setFilterCategory("Uncategorised")}
+                className={cn(
+                  "w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-colors",
+                  filterCategory === "Uncategorised"
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                )}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: categoryHex("Uncategorised") }}
+                  />
+                  <span className="truncate">Uncategorised</span>
+                </span>
+                <span className="text-[10px] tabular-nums">{categoryCounts.Uncategorised}</span>
+              </button>
+            )}
+          </div>
+        </aside>
+      </div>
 
       {/* 15-day chart */}
       {resources.length > 0 && hasChartData && (

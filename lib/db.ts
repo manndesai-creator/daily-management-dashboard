@@ -322,9 +322,15 @@ export function useResources() {
   const updateResource = useCallback((id: string, updates: Partial<Resource>) => {
     setResources((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
     const db: Record<string, unknown> = {};
-    if (updates.status !== undefined) db.status = updates.status;
+    if (updates.url !== undefined) db.url = updates.url;
     if (updates.title !== undefined) db.title = updates.title;
+    if (updates.status !== undefined) db.status = updates.status;
+    if (updates.category !== undefined) db.category = updates.category;
     if (updates.notes !== undefined) db.notes = updates.notes ?? null;
+    if ("pinnedDate" in updates) db.pinned_date = updates.pinnedDate ?? null;
+    if (updates.thumbnail !== undefined) db.thumbnail = updates.thumbnail ?? null;
+    if (updates.youtubeId !== undefined) db.youtube_id = updates.youtubeId ?? null;
+    if (updates.resourceType !== undefined) db.resource_type = updates.resourceType;
     supabase.from("resources").update(db).eq("id", id)
       .then(({ error }) => { if (error) console.error("updateResource error:", error); });
   }, []);
