@@ -45,8 +45,32 @@ function mapClient(row: any): Client {
   };
 }
 
+// Agency type is encoded as an `##AGENCY:Type##` prefix inside the `notes`
+// column so we don't depend on a separate `agency_type` column existing.
+const AGENCY_PREFIX_RE = /^##AGENCY:([^#\n]+)##\n?/;
+
+function unpackTaskNotes(stored: string | null | undefined): {
+  notes: string | undefined;
+  agencyType: string | undefined;
+} {
+  if (!stored) return { notes: undefined, agencyType: undefined };
+  const match = stored.match(AGENCY_PREFIX_RE);
+  if (match) {
+    const rest = stored.slice(match[0].length);
+    return { agencyType: match[1], notes: rest.length > 0 ? rest : undefined };
+  }
+  return { notes: stored, agencyType: undefined };
+}
+
+function packTaskNotes(notes: string | undefined, agencyType: string | undefined): string | null {
+  const n = notes ?? "";
+  if (agencyType) return `##AGENCY:${agencyType}##\n${n}`;
+  return n.length > 0 ? n : null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapTask(row: any): Task {
+  const { notes, agencyType } = unpackTaskNotes(row.notes);
   return {
     id: row.id,
     date: row.date,
@@ -54,10 +78,10 @@ function mapTask(row: any): Task {
     clientId: row.client_id ?? undefined,
     clientName: row.client_name ?? undefined,
     learningType: row.learning_type ?? undefined,
-    agencyType: row.agency_type ?? undefined,
+    agencyType: agencyType ?? row.agency_type ?? undefined,
     url: row.url ?? undefined,
     title: row.title,
-    notes: row.notes ?? undefined,
+    notes,
     duration: row.duration ?? undefined,
     completed: row.completed,
     createdAt: row.created_at,
@@ -252,6 +276,11 @@ export function useClients() {
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const tasksRef = useRef<Task[]>([]);
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
 
   useEffect(() => {
     supabase
@@ -274,10 +303,9 @@ export function useTasks() {
       client_id: task.clientId ?? null,
       client_name: task.clientName ?? null,
       learning_type: task.learningType ?? null,
-      agency_type: task.agencyType ?? null,
       url: task.url ?? null,
       title: task.title,
-      notes: task.notes ?? null,
+      notes: packTaskNotes(task.notes, task.agencyType),
       duration: task.duration ?? null,
       completed: task.completed,
       created_at: task.createdAt,
@@ -285,19 +313,27 @@ export function useTasks() {
   }, []);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+    const current = tasksRef.current.find((t) => t.id === id);
+    if (!current) return;
+    const merged: Task = { ...current, ...updates };
+    setTasks((prev) => prev.map((t) => (t.id === id ? merged : t)));
+
     const db: Record<string, unknown> = {};
     if (updates.completed !== undefined) db.completed = updates.completed;
     if (updates.title !== undefined) db.title = updates.title;
-    if (updates.notes !== undefined) db.notes = updates.notes ?? null;
     if (updates.duration !== undefined) db.duration = updates.duration ?? null;
     if (updates.url !== undefined) db.url = updates.url ?? null;
     if (updates.category !== undefined) db.category = updates.category;
     if (updates.clientId !== undefined) db.client_id = updates.clientId ?? null;
     if (updates.clientName !== undefined) db.client_name = updates.clientName ?? null;
     if (updates.learningType !== undefined) db.learning_type = updates.learningType ?? null;
-    if (updates.agencyType !== undefined) db.agency_type = updates.agencyType ?? null;
     if (updates.date !== undefined) db.date = updates.date;
+
+    // Re-pack notes whenever notes OR agencyType might have changed
+    if ("notes" in updates || "agencyType" in updates) {
+      db.notes = packTaskNotes(merged.notes, merged.agencyType);
+    }
+
     supabase.from("tasks").update(db).eq("id", id)
       .then(({ error }) => { if (error) console.error("updateTask error:", error); });
   }, []);
