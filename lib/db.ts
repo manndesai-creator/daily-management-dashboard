@@ -64,13 +64,66 @@ function mapTask(row: any): Task {
   };
 }
 
+// Structured captures (Idea / Reminder) are serialised as JSON inside the
+// content column so we don't need a schema change. A legacy plain string
+// is treated as a "quick" capture.
+type CaptureMeta = {
+  __cap: 1;
+  type: "idea" | "reminder";
+  title?: string;
+  description?: string;
+  emoji?: string;
+  timeframe?: Capture["timeframe"];
+  reminderDate?: string;
+};
+
+function unpackCaptureContent(content: string): Omit<Capture, "id" | "createdAt" | "processed" | "content"> {
+  if (typeof content === "string" && content.startsWith('{"__cap":')) {
+    try {
+      const parsed = JSON.parse(content) as CaptureMeta;
+      if (parsed && parsed.__cap === 1) {
+        return {
+          type: parsed.type,
+          title: parsed.title,
+          description: parsed.description,
+          emoji: parsed.emoji,
+          timeframe: parsed.timeframe,
+          reminderDate: parsed.reminderDate,
+        };
+      }
+    } catch {
+      /* fall through to plain */
+    }
+  }
+  return {
+    type: "quick",
+    description: content,
+  };
+}
+
+function packCaptureContent(c: Capture): string {
+  if (c.type === "quick") return c.description ?? c.content ?? "";
+  const meta: CaptureMeta = {
+    __cap: 1,
+    type: c.type,
+    title: c.title,
+    description: c.description,
+    emoji: c.emoji,
+    timeframe: c.timeframe,
+    reminderDate: c.reminderDate,
+  };
+  return JSON.stringify(meta);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapCapture(row: any): Capture {
+  const unpacked = unpackCaptureContent(row.content);
   return {
     id: row.id,
     content: row.content,
     processed: row.processed,
     createdAt: row.created_at,
+    ...unpacked,
   };
 }
 
@@ -275,22 +328,58 @@ export function useCaptures() {
   }, []);
 
   const addCapture = useCallback((capture: Capture) => {
-    setCaptures((prev) => [capture, ...prev]);
+    const packed = packCaptureContent(capture);
+    const stored: Capture = { ...capture, content: packed };
+    setCaptures((prev) => [stored, ...prev]);
     supabase.from("captures").insert({
-      id: capture.id,
-      content: capture.content,
-      processed: capture.processed,
-      created_at: capture.createdAt,
+      id: stored.id,
+      content: packed,
+      processed: stored.processed,
+      created_at: stored.createdAt,
     }).then(({ error }) => { if (error) console.error("addCapture error:", error); });
   }, []);
 
   const updateCapture = useCallback((id: string, updates: Partial<Capture>) => {
-    setCaptures((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+    setCaptures((prev) =>
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        const merged: Capture = { ...c, ...updates };
+        // Re-pack content if structured fields changed
+        const structuredFieldsTouched =
+          "type" in updates ||
+          "title" in updates ||
+          "description" in updates ||
+          "emoji" in updates ||
+          "timeframe" in updates ||
+          "reminderDate" in updates;
+        if (structuredFieldsTouched) {
+          merged.content = packCaptureContent(merged);
+        }
+        return merged;
+      })
+    );
+
     const db: Record<string, unknown> = {};
     if (updates.processed !== undefined) db.processed = updates.processed;
+
+    const structuredFieldsTouched =
+      "type" in updates ||
+      "title" in updates ||
+      "description" in updates ||
+      "emoji" in updates ||
+      "timeframe" in updates ||
+      "reminderDate" in updates;
+    if (structuredFieldsTouched) {
+      const current = captures.find((c) => c.id === id);
+      if (current) {
+        const merged: Capture = { ...current, ...updates };
+        db.content = packCaptureContent(merged);
+      }
+    }
+
     supabase.from("captures").update(db).eq("id", id)
       .then(({ error }) => { if (error) console.error("updateCapture error:", error); });
-  }, []);
+  }, [captures]);
 
   const deleteCapture = useCallback((id: string) => {
     setCaptures((prev) => prev.filter((c) => c.id !== id));
