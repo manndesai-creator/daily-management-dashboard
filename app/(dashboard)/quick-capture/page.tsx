@@ -81,7 +81,6 @@ export default function QuickCapturePage() {
   const { clients } = useClients();
   const [mode, setMode] = useState<CaptureType>("quick");
   const [filter, setFilter] = useState<"inbox" | "ideas" | "reminders" | "processed" | "all">("inbox");
-  const [filterRelated, setFilterRelated] = useState<CaptureRelatedTo | "all">("all");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form state (per-mode)
@@ -206,13 +205,7 @@ export default function QuickCapturePage() {
     }
   }
 
-  // Filter
-  const matchesRelated = (c: Capture) => {
-    if (filterRelated === "all") return true;
-    return c.relatedToCategory === filterRelated;
-  };
-
-  const filteredAll = captures.filter(matchesRelated);
+  const filteredAll = captures;
 
   const quickItems = filteredAll.filter((c) => c.type === "quick");
   const ideaItems = filteredAll.filter((c) => c.type === "idea");
@@ -922,39 +915,6 @@ export default function QuickCapturePage() {
         )}
       </div>
 
-      {/* Related-to filter */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <span className="text-[11px] text-muted-foreground">Related to:</span>
-        <button
-          onClick={() => setFilterRelated("all")}
-          className={cn(
-            "px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors",
-            filterRelated === "all"
-              ? "bg-foreground text-background border-foreground"
-              : "bg-secondary border-border text-muted-foreground hover:text-foreground"
-          )}
-        >
-          Any
-        </button>
-        {(Object.keys(RELATED_LABEL) as CaptureRelatedTo[]).map((cat) => {
-          const hex = RELATED_HEX[cat];
-          const active = filterRelated === cat;
-          const count = captures.filter((c) => c.relatedToCategory === cat).length;
-          return (
-            <button
-              key={cat}
-              onClick={() => setFilterRelated(cat)}
-              className={cn(
-                "px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors",
-                active ? "border-transparent" : "border-border text-muted-foreground hover:text-foreground"
-              )}
-              style={active ? { backgroundColor: `${hex}22`, color: hex } : undefined}
-            >
-              {RELATED_LABEL[cat]} ({count})
-            </button>
-          );
-        })}
-      </div>
 
       {/* Captures list */}
       {renderList()}
