@@ -296,20 +296,29 @@ export function useTasks() {
 
   const addTask = useCallback((task: Task) => {
     setTasks((prev) => [task, ...prev]);
-    supabase.from("tasks").insert({
+    // Only send columns that have values. Some optional columns (url,
+    // agency_type) may not exist in older Supabase schemas, and sending even
+    // a null value would crash the insert with a "column does not exist" 400.
+    const row: Record<string, unknown> = {
       id: task.id,
       date: task.date,
       category: task.category,
-      client_id: task.clientId ?? null,
-      client_name: task.clientName ?? null,
-      learning_type: task.learningType ?? null,
-      url: task.url ?? null,
       title: task.title,
-      notes: packTaskNotes(task.notes, task.agencyType),
-      duration: task.duration ?? null,
       completed: task.completed,
       created_at: task.createdAt,
-    }).then(({ error }) => { if (error) console.error("addTask error:", error); });
+    };
+    if (task.clientId) row.client_id = task.clientId;
+    if (task.clientName) row.client_name = task.clientName;
+    if (task.learningType) row.learning_type = task.learningType;
+    if (task.url) row.url = task.url;
+    if (task.duration) row.duration = task.duration;
+    const packedNotes = packTaskNotes(task.notes, task.agencyType);
+    if (packedNotes) row.notes = packedNotes;
+    supabase.from("tasks").insert(row).then(({ error }) => {
+      if (error) {
+        console.error("addTask error:", error.message, error.code, error);
+      }
+    });
   }, []);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {

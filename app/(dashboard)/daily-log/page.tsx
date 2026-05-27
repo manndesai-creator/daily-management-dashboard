@@ -197,11 +197,13 @@ function DailyLogContent() {
     learningType: "",
     agencyType: "",
     url: "",
+    date: currentDate,
     hours: "0",
     minutes: "0",
     notes: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const formDateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -285,12 +287,12 @@ function DailyLogContent() {
     };
 
     if (editingId) {
-      updateTask(editingId, payload);
+      updateTask(editingId, { ...payload, date: form.date });
       setEditingId(null);
     } else {
       const newTask: Task = {
         id: generateId(),
-        date: currentDate,
+        date: form.date || currentDate,
         ...payload,
         completed: false,
         createdAt: new Date().toISOString(),
@@ -316,6 +318,7 @@ function DailyLogContent() {
       learningType: task.learningType ?? "",
       agencyType: task.agencyType ?? "",
       url: task.url ?? "",
+      date: task.date,
       hours: String(Math.min(h, 8)),
       minutes: String(closestM),
       notes: task.notes ?? "",
@@ -514,6 +517,39 @@ function DailyLogContent() {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <CalendarIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        <button
+          type="button"
+          onClick={() => {
+            const el = formDateInputRef.current;
+            if (!el) return;
+            const anyEl = el as HTMLInputElement & { showPicker?: () => void };
+            if (typeof anyEl.showPicker === "function") anyEl.showPicker();
+            else el.focus();
+          }}
+          className="text-sm text-foreground hover:text-primary px-3 py-1.5 rounded border border-border bg-background flex-1 text-left"
+        >
+          {formatDisplayDate(form.date)}
+        </button>
+        <input
+          ref={formDateInputRef}
+          type="date"
+          value={form.date}
+          onChange={(e) =>
+            e.target.value && setForm((p) => ({ ...p, date: e.target.value }))
+          }
+          className="sr-only"
+          tabIndex={-1}
+          aria-label="Task date"
+        />
+        {form.date !== currentDate && (
+          <span className="text-[11px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full font-medium">
+            different day
+          </span>
+        )}
       </div>
 
       <textarea
@@ -767,7 +803,7 @@ function DailyLogContent() {
                   handleCancelForm();
                 } else {
                   setEditingId(null);
-                  setForm(emptyForm);
+                  setForm({ ...emptyForm, date: currentDate });
                   setShowForm(true);
                 }
               }}
@@ -852,7 +888,7 @@ function DailyLogContent() {
               <button
                 onClick={() => {
                   setEditingId(null);
-                  setForm(emptyForm);
+                  setForm({ ...emptyForm, date: currentDate });
                   setShowForm(true);
                 }}
                 className="mt-2 text-sm text-primary hover:underline"
