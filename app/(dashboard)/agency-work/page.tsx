@@ -62,6 +62,8 @@ export default function AgencyWorkPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [clickedDate, setClickedDate] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<"this-week" | "upcoming" | "done">("this-week");
+  const [chartType, setChartType] = useState<string | "all">("all");
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const emptyForm = {
@@ -230,7 +232,15 @@ export default function AgencyWorkPage() {
 
   // ─── UI bits ───────────────────────────────────────────────────────────────
 
-  function TaskRow({ task, isCarryOver }: { task: Task; isCarryOver?: boolean }) {
+  function TaskRow({
+    task,
+    isCarryOver,
+    noStrike,
+  }: {
+    task: Task;
+    isCarryOver?: boolean;
+    noStrike?: boolean;
+  }) {
     const type = normalizeAgencyType(task.agencyType);
     const tHex = AGENCY_TYPE_HEX[type] ?? "#94a3b8";
     const emoji = AGENCY_TYPE_EMOJI[type] ?? "🔧";
@@ -255,7 +265,7 @@ export default function AgencyWorkPage() {
         className={cn(
           "flex items-start gap-3 p-3 rounded-lg border bg-card transition-colors group",
           isEditing && "ring-2 ring-primary/40 border-primary/40",
-          task.completed && "opacity-65"
+          task.completed && !noStrike && "opacity-65"
         )}
       >
         <button
@@ -282,7 +292,7 @@ export default function AgencyWorkPage() {
             <p
               className={cn(
                 "text-sm font-medium",
-                task.completed && "line-through text-muted-foreground"
+                task.completed && !noStrike && "line-through text-muted-foreground"
               )}
             >
               {task.title}
@@ -515,99 +525,148 @@ export default function AgencyWorkPage() {
         </div>
       )}
 
-      {/* This Week */}
-      <section className="mb-7">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-foreground">
-            This Week{" "}
-            <span className="text-muted-foreground font-normal">· {thisWeekTasks.length}</span>
-          </h2>
-          <p className="text-[11px] text-muted-foreground">
-            today &rarr; this Sunday, overdue first
-          </p>
-        </div>
-        {thisWeekTasks.length === 0 ? (
-          <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
-            All clear for this week.
-            <br />
-            <button onClick={handleAddClick} className="mt-2 text-primary hover:underline">
-              Add a task
+      {/* Tab nav */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex gap-1.5">
+          {(
+            [
+              { key: "this-week", label: "This Week", count: thisWeekTasks.length },
+              { key: "upcoming", label: "Upcoming Weeks", count: upcomingTasks.length },
+              { key: "done", label: "Done", count: doneTasks.length },
+            ] as { key: typeof activeView; label: string; count: number }[]
+          ).map(({ key, label, count }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveView(key)}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
+                activeView === key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {label} <span className="opacity-70 ml-1">({count})</span>
             </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {thisWeekTasks.map((t) => (
-              <TaskRow key={t.id} task={t} isCarryOver={t.date < todayStr} />
-            ))}
-          </div>
-        )}
-      </section>
+          ))}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          {activeView === "this-week" && "today → this Sunday, overdue first"}
+          {activeView === "upcoming" && "anything beyond this Sunday"}
+          {activeView === "done" && "grouped by the day you ticked it off"}
+        </p>
+      </div>
+
+      {/* This Week */}
+      {activeView === "this-week" && (
+        <section className="mb-7">
+          {thisWeekTasks.length === 0 ? (
+            <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
+              All clear for this week.
+              <br />
+              <button onClick={handleAddClick} className="mt-2 text-primary hover:underline">
+                Add a task
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {thisWeekTasks.map((t) => (
+                <TaskRow key={t.id} task={t} isCarryOver={t.date < todayStr} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Upcoming Weeks */}
-      <section className="mb-7">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-foreground">
-            Upcoming Weeks{" "}
-            <span className="text-muted-foreground font-normal">· {upcomingTasks.length}</span>
-          </h2>
-          <p className="text-[11px] text-muted-foreground">
-            anything beyond this Sunday
-          </p>
-        </div>
-        {upcomingTasks.length === 0 ? (
-          <div className="bg-card border border-border rounded-lg p-5 text-center text-muted-foreground text-xs">
-            Nothing planned beyond this week yet.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {upcomingTasks.map((t) => (
-              <TaskRow key={t.id} task={t} />
-            ))}
-          </div>
-        )}
-      </section>
+      {activeView === "upcoming" && (
+        <section className="mb-7">
+          {upcomingTasks.length === 0 ? (
+            <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
+              Nothing planned beyond this week yet.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {upcomingTasks.map((t) => (
+                <TaskRow key={t.id} task={t} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Done */}
-      <section className="mb-7">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-foreground">
-            Done{" "}
-            <span className="text-muted-foreground font-normal">· {doneTasks.length}</span>
-          </h2>
-          <p className="text-[11px] text-muted-foreground">
-            grouped by the day you ticked it off
-          </p>
-        </div>
-        {doneTasks.length === 0 ? (
-          <div className="bg-card border border-border rounded-lg p-5 text-center text-muted-foreground text-xs">
-            Nothing completed yet.
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {doneDateKeys.map((d) => (
-              <div key={d}>
-                <p className="text-xs font-semibold text-muted-foreground mb-2">
-                  {dateHeading(d, todayStr)}
-                </p>
-                <div className="space-y-2">
-                  {doneByDate[d].map((t) => (
-                    <TaskRow key={t.id} task={t} />
-                  ))}
+      {activeView === "done" && (
+        <section className="mb-7">
+          {doneTasks.length === 0 ? (
+            <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
+              Nothing completed yet.
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {doneDateKeys.map((d) => (
+                <div key={d}>
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">
+                    {dateHeading(d, todayStr)}
+                  </p>
+                  <div className="space-y-2">
+                    {doneByDate[d].map((t) => (
+                      <TaskRow key={t.id} task={t} noStrike />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* 30-day chart */}
       {hasChartData && (
         <div className="bg-card border border-border rounded-lg p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Last 30 days</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Completed agency tasks per day, by type. Click any bar for details.
-            </p>
+          <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Last 30 days</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Completed agency tasks per day, by type. Click any bar for details.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setChartType("all")}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                  chartType === "all"
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                )}
+              >
+                All work
+              </button>
+              {activeTypesInChart.map((type) => {
+                const hex = AGENCY_TYPE_HEX[type];
+                const active = chartType === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setChartType(type)}
+                    className={cn(
+                      "px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5",
+                      active ? "border-transparent" : "border-border text-muted-foreground hover:text-foreground"
+                    )}
+                    style={active ? { backgroundColor: `${hex}22`, color: hex } : undefined}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: hex }}
+                    />
+                    {type}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -645,36 +704,37 @@ export default function AgencyWorkPage() {
                   });
                 }}
               />
-              {activeTypesInChart.map((type) => (
-                <Bar
-                  key={type}
-                  dataKey={type}
-                  name={type}
-                  stackId="a"
-                  fill={AGENCY_TYPE_HEX[type] ?? "#94a3b8"}
-                  cursor="pointer"
-                  onClick={(data: unknown) => {
-                    const d = data as { payload?: { date?: string } };
-                    if (d.payload?.date) setClickedDate(d.payload.date);
-                  }}
-                />
-              ))}
+              {activeTypesInChart
+                .filter((type) => chartType === "all" || type === chartType)
+                .map((type) => (
+                  <Bar
+                    key={type}
+                    dataKey={type}
+                    name={type}
+                    stackId="a"
+                    fill={AGENCY_TYPE_HEX[type] ?? "#94a3b8"}
+                    cursor="pointer"
+                    onClick={(data: unknown) => {
+                      const d = data as { payload?: { date?: string } };
+                      if (d.payload?.date) setClickedDate(d.payload.date);
+                    }}
+                  />
+                ))}
             </BarChart>
           </ResponsiveContainer>
-          <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-border">
-            {activeTypesInChart.map((type) => (
-              <div key={type} className="flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: AGENCY_TYPE_HEX[type] }}
-                />
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <span>{AGENCY_TYPE_EMOJI[type]}</span>
-                  {type}
-                </span>
-              </div>
-            ))}
-          </div>
+          {chartType === "all" && (
+            <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-border">
+              {activeTypesInChart.map((type) => (
+                <div key={type} className="flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: AGENCY_TYPE_HEX[type] }}
+                  />
+                  <span className="text-xs text-muted-foreground">{type}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
