@@ -15,7 +15,6 @@ import {
   generateId,
   today,
   addDays,
-  getWeekStart,
   formatDuration,
   formatDisplayDate,
 } from "@/lib/store";
@@ -23,23 +22,14 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Plus, Trash2, Check, X, Edit2, AlertTriangle, Calendar as CalendarIcon,
-  Clock, ChevronRight,
+  Clock,
 } from "lucide-react";
 
 const HOUR_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const MINUTE_OPTIONS = [0, 15, 30, 45];
-const SHORT_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 const INPUT_CLS =
   "w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
-
-function formatShort(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-  });
-}
 
 function daysSince(dateStr: string, fromStr: string): number {
   const [y1, m1, d1] = dateStr.split("-").map(Number);
@@ -49,12 +39,24 @@ function daysSince(dateStr: string, fromStr: string): number {
   return Math.round((b - a) / 86400000);
 }
 
+function dateHeading(dateStr: string, todayStr: string): string {
+  const diff = daysSince(dateStr, todayStr);
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  if (diff === 0) return "Today";
+  if (diff === -1) return "Yesterday";
+  return date.toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
 export default function AgencyWorkPage() {
   const { tasks, addTask, updateTask, deleteTask } = useTasks();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeType, setActiveType] = useState<string | "all">("all");
   const [clickedDate, setClickedDate] = useState<string | null>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,11 +71,8 @@ export default function AgencyWorkPage() {
   const [form, setForm] = useState(emptyForm);
 
   const todayStr = today();
-  const weekStart = getWeekStart(todayStr);
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const monthPrefix = todayStr.slice(0, 7); // YYYY-MM
+  const monthPrefix = todayStr.slice(0, 7);
 
-  // All agency tasks
   const agencyTasks = tasks.filter((t) => t.category === "agency");
 
   // Header stats
@@ -84,13 +83,21 @@ export default function AgencyWorkPage() {
     .reduce((sum, t) => sum + (t.duration ?? 0), 0);
   const activeNow = agencyTasks.filter((t) => !t.completed).length;
 
-  // Filtered tasks (when a card is clicked)
-  const filteredTasks =
-    activeType === "all"
-      ? agencyTasks
-      : agencyTasks.filter((t) => normalizeAgencyType(t.agencyType) === activeType);
+  // Group all agency tasks by date (descending). Tasks within a date are sorted
+  // with active items first, then completed.
+  const sortedTasks = agencyTasks.slice().sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return a.createdAt < b.createdAt ? 1 : -1;
+  });
+  const byDate: Record<string, Task[]> = {};
+  sortedTasks.forEach((t) => {
+    if (!byDate[t.date]) byDate[t.date] = [];
+    byDate[t.date].push(t);
+  });
+  const dateKeys = Object.keys(byDate).sort((a, b) => (a < b ? 1 : -1));
 
-  // 30-day chart data — completed agency tasks per day by type
+  // 30-day stacked chart — only completed tasks, by their task.date
   const last30Start = addDays(todayStr, -29);
   const last30Days = Array.from({ length: 30 }, (_, i) => addDays(last30Start, i));
   const chartData = last30Days.map((date) => {
@@ -114,36 +121,6 @@ export default function AgencyWorkPage() {
   const activeTypesInChart = AGENCY_TYPES.filter((type) =>
     chartData.some((d) => typeof d[type] === "number" && (d[type] as number) > 0)
   );
-
-  // Recent activity (last 14 days, all agency tasks)
-  const recentStart = addDays(todayStr, -13);
-  const recentTasks = agencyTasks
-    .filter((t) => t.date >= recentStart)
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-
-  // Per-type stats
-  function getTypeStats(type: string) {
-    const all = agencyTasks.filter((t) => normalizeAgencyType(t.agencyType) === type);
-    const active = all.filter((t) => !t.completed);
-    const monthDone = all.filter((t) => t.completed && t.date.startsWith(monthPrefix)).length;
-    const weekData = weekDays.map((day, i) => {
-      const dayT = all.filter((t) => t.date === day);
-      return {
-        label: SHORT_DAYS[i],
-        date: day,
-        isToday: day === todayStr,
-        total: dayT.length,
-        done: dayT.filter((t) => t.completed).length,
-        titles: dayT.map((t) => `${t.completed ? "✓ " : "○ "}${t.title}`),
-      };
-    });
-    const recent = all
-      .slice()
-      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
-      .slice(0, 3);
-    const stuck = active.filter((t) => daysSince(t.date, todayStr) > 7);
-    return { all, active, monthDone, weekData, recent, stuck };
-  }
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
@@ -201,14 +178,14 @@ export default function AgencyWorkPage() {
     setForm(emptyForm);
   }
 
-  function handleAddClick(prefillType?: string) {
-    if (showForm && !editingId && prefillType && form.agencyType === prefillType) {
+  function handleAddClick() {
+    if (showForm || editingId) {
       handleCancelForm();
-      return;
+    } else {
+      setEditingId(null);
+      setForm(emptyForm);
+      setShowForm(true);
     }
-    setEditingId(null);
-    setForm({ ...emptyForm, agencyType: prefillType ?? "Outreach" });
-    setShowForm(true);
   }
 
   function toggleTaskDone(task: Task) {
@@ -223,30 +200,27 @@ export default function AgencyWorkPage() {
     else el.focus();
   }
 
-  // ─── Reusable bits ─────────────────────────────────────────────────────────
-
-  function TypeChip({ type }: { type: string }) {
-    const hex = AGENCY_TYPE_HEX[type] ?? "#94a3b8";
-    return (
-      <span
-        className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-        style={{ backgroundColor: `${hex}1f`, color: hex }}
-      >
-        {type}
-      </span>
-    );
-  }
+  // ─── UI bits ───────────────────────────────────────────────────────────────
 
   function TaskRow({ task }: { task: Task }) {
-    const tHex = AGENCY_TYPE_HEX[normalizeAgencyType(task.agencyType)] ?? "#94a3b8";
-    const days = daysSince(task.date, todayStr);
-    const isStuck = !task.completed && days > 7;
+    const type = normalizeAgencyType(task.agencyType);
+    const tHex = AGENCY_TYPE_HEX[type] ?? "#94a3b8";
+    const emoji = AGENCY_TYPE_EMOJI[type] ?? "🔧";
+    const stuckDays = daysSince(task.date, todayStr);
+    const isStuck = !task.completed && stuckDays > 7;
+    const isEditing = editingId === task.id;
     return (
-      <div className="flex items-center gap-3 p-2.5 rounded-md hover:bg-secondary/40 transition-colors group">
+      <div
+        className={cn(
+          "flex items-start gap-3 p-3 rounded-lg border bg-card transition-colors group",
+          isEditing && "ring-2 ring-primary/40 border-primary/40",
+          task.completed && "opacity-65"
+        )}
+      >
         <button
           onClick={() => toggleTaskDone(task)}
           className={cn(
-            "w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors",
+            "mt-1 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors",
             task.completed
               ? "bg-emerald-500 border-emerald-500"
               : "border-border hover:border-emerald-400"
@@ -254,50 +228,71 @@ export default function AgencyWorkPage() {
         >
           {task.completed && <Check className="w-2.5 h-2.5 text-white" />}
         </button>
-        <span
-          className="w-1.5 h-6 rounded-sm flex-shrink-0"
-          style={{ backgroundColor: tHex }}
-        />
+
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
+          style={{ backgroundColor: `${tHex}22` }}
+        >
+          {emoji}
+        </div>
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span
+            <p
               className={cn(
-                "text-sm",
+                "text-sm font-medium",
                 task.completed && "line-through text-muted-foreground"
               )}
             >
               {task.title}
+            </p>
+            <span
+              className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+              style={{ backgroundColor: `${tHex}1f`, color: tHex }}
+            >
+              {type}
             </span>
-            <TypeChip type={normalizeAgencyType(task.agencyType)} />
             {isStuck && (
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 flex items-center gap-1">
                 <AlertTriangle className="w-2.5 h-2.5" />
-                Stuck {days}d
+                Stuck {stuckDays}d
               </span>
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-2">
-            <CalendarIcon className="w-3 h-3" />
-            {formatShort(task.date)}
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
             {task.duration ? (
-              <span className="flex items-center gap-1">
+              <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {formatDuration(task.duration)}
               </span>
             ) : null}
-          </p>
+          </div>
+          {task.notes && (
+            <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{task.notes}</p>
+          )}
         </div>
-        <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+
+        <div
+          className={cn(
+            "flex items-center gap-1 transition-opacity flex-shrink-0",
+            isEditing ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}
+        >
           <button
-            onClick={() => handleEdit(task)}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
-            aria-label="Edit"
+            onClick={() => (isEditing ? handleCancelForm() : handleEdit(task))}
+            className={cn(
+              "p-1 rounded transition-colors",
+              isEditing
+                ? "bg-primary/10 text-primary"
+                : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+            )}
+            aria-label={isEditing ? "Close editor" : "Edit"}
           >
-            <Edit2 className="w-3.5 h-3.5" />
+            {isEditing ? <X className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={() => deleteTask(task.id)}
-            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground transition-colors"
             aria-label="Delete"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -308,7 +303,7 @@ export default function AgencyWorkPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
@@ -317,13 +312,13 @@ export default function AgencyWorkPage() {
             Everything internal to Varion Media — tracked, sorted, charted.
           </p>
         </div>
-        <Button onClick={() => handleAddClick()} size="sm">
+        <Button onClick={handleAddClick} size="sm">
           <Plus className="w-4 h-4 mr-1" />
           Add Task
         </Button>
       </div>
 
-      {/* Top stat strip */}
+      {/* Top stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Active</p>
@@ -383,11 +378,11 @@ export default function AgencyWorkPage() {
                       onClick={() => setForm((p) => ({ ...p, agencyType: t }))}
                       className={cn(
                         "px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1",
-                        active ? "border-transparent" : "border-border text-muted-foreground hover:text-foreground"
+                        active
+                          ? "border-transparent"
+                          : "border-border text-muted-foreground hover:text-foreground"
                       )}
-                      style={
-                        active ? { backgroundColor: `${hex}22`, color: hex } : undefined
-                      }
+                      style={active ? { backgroundColor: `${hex}22`, color: hex } : undefined}
                     >
                       <span>{AGENCY_TYPE_EMOJI[t]}</span>
                       {t}
@@ -464,171 +459,54 @@ export default function AgencyWorkPage() {
         </div>
       )}
 
-      {/* Per-type cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-7">
-        <button
-          type="button"
-          onClick={() => setActiveType("all")}
-          className={cn(
-            "text-left rounded-lg border bg-card p-4 transition-all hover:border-foreground/30",
-            activeType === "all" && "ring-2 ring-primary/40 border-primary/40"
-          )}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold">All agency work</span>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-          </div>
-          <p className="text-3xl font-bold text-foreground">{activeNow}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">active across all types</p>
-        </button>
-
-        {AGENCY_TYPES.map((type) => {
-          const hex = AGENCY_TYPE_HEX[type];
-          const stats = getTypeStats(type);
-          const maxCount = Math.max(...stats.weekData.map((d) => d.total), 1);
-          const isActive = activeType === type;
-          return (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setActiveType(isActive ? "all" : type)}
-              className={cn(
-                "text-left rounded-lg border bg-card overflow-hidden transition-all hover:border-foreground/30 flex flex-col",
-                isActive && "ring-2 border-transparent"
-              )}
-              style={isActive ? { boxShadow: `0 0 0 2px ${hex}88` } : undefined}
-            >
-              <div
-                className="h-1.5"
-                style={{ backgroundColor: hex }}
-              />
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xl flex-shrink-0">
-                      {AGENCY_TYPE_EMOJI[type]}
-                    </span>
-                    <span className="text-sm font-semibold truncate">{type}</span>
-                  </div>
-                  <span
-                    className="text-[10px] font-bold tabular-nums px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: `${hex}22`, color: hex }}
-                  >
-                    {stats.active.length}
-                  </span>
-                </div>
-
-                {/* Mini weekly bars */}
-                <div className="flex items-end gap-1 h-8 mb-3">
-                  {stats.weekData.map((d, i) => {
-                    const tip =
-                      d.total > 0
-                        ? `${d.label} — ${d.done}/${d.total} done\n${d.titles.join("\n")}`
-                        : `${d.label} — no tasks`;
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                        <div className="w-full h-6 flex items-end" title={tip}>
-                          {d.total > 0 ? (
-                            <div
-                              className="w-full rounded-t-sm"
-                              style={{
-                                height: `${(d.total / maxCount) * 100}%`,
-                                minHeight: 4,
-                                backgroundColor: d.done === d.total ? hex : `${hex}55`,
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full bg-border rounded-t-sm" style={{ height: 2 }} />
-                          )}
-                        </div>
-                        <span
-                          className={cn(
-                            "text-[9px] leading-none",
-                            d.isToday
-                              ? "font-bold"
-                              : "text-muted-foreground/50"
-                          )}
-                          style={d.isToday ? { color: hex } : undefined}
-                        >
-                          {d.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Recent */}
-                <div className="flex-1 space-y-1">
-                  {stats.recent.length === 0 ? (
-                    <p className="text-[11px] text-muted-foreground/60 italic">
-                      Nothing logged yet
-                    </p>
-                  ) : (
-                    stats.recent.map((t) => (
-                      <p
-                        key={t.id}
-                        className={cn(
-                          "text-[11px] truncate flex items-center gap-1",
-                          t.completed && "text-muted-foreground line-through"
-                        )}
-                      >
-                        <span className="flex-shrink-0">{t.completed ? "✓" : "○"}</span>
-                        {t.title}
-                      </p>
-                    ))
-                  )}
-                </div>
-
-                {/* Stuck badge + month done */}
-                <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
-                  <span className="text-[10px] text-muted-foreground">
-                    {stats.monthDone} done this month
-                  </span>
-                  {stats.stuck.length > 0 && (
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 flex items-center gap-1">
-                      <AlertTriangle className="w-2.5 h-2.5" />
-                      {stats.stuck.length} stuck
-                    </span>
-                  )}
-                </div>
-
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddClick(type);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  className="mt-3 text-[11px] text-center py-1.5 rounded border border-dashed border-border hover:border-foreground/40 hover:bg-secondary/50 transition-colors flex items-center justify-center gap-1"
-                >
-                  <Plus className="w-3 h-3" />
-                  Quick add
-                </span>
-              </div>
+      {/* Tasks grouped by date */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Tasks
+        </h2>
+        {dateKeys.length === 0 ? (
+          <div className="bg-card border border-border rounded-lg p-10 text-center text-muted-foreground text-sm">
+            No agency tasks yet.
+            <br />
+            <button onClick={handleAddClick} className="mt-2 text-primary hover:underline">
+              Add your first one
             </button>
-          );
-        })}
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {dateKeys.map((date) => {
+              const list = byDate[date];
+              const doneCount = list.filter((t) => t.completed).length;
+              return (
+                <div key={date}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-foreground">
+                      {dateHeading(date, todayStr)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {doneCount}/{list.length} done
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {list.map((t) => (
+                      <TaskRow key={t.id} task={t} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 30-day chart */}
       {hasChartData && (
-        <div className="bg-card border border-border rounded-lg p-6 mb-7">
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Last 30 days</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Completed agency tasks per day, by type. Click any bar for details.
-              </p>
-            </div>
-            {activeType !== "all" && (
-              <button
-                type="button"
-                onClick={() => setActiveType("all")}
-                className="text-xs text-primary hover:underline"
-              >
-                Show all types
-              </button>
-            )}
+        <div className="bg-card border border-border rounded-lg p-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Last 30 days</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Completed agency tasks per day, by type. Click any bar for details.
+            </p>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -666,7 +544,7 @@ export default function AgencyWorkPage() {
                   });
                 }}
               />
-              {(activeType === "all" ? activeTypesInChart : [activeType]).map((type) => (
+              {activeTypesInChart.map((type) => (
                 <Bar
                   key={type}
                   dataKey={type}
@@ -698,57 +576,6 @@ export default function AgencyWorkPage() {
           </div>
         </div>
       )}
-
-      {/* Recent activity list */}
-      <div className="bg-card border border-border rounded-lg p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Recent activity</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {activeType === "all"
-                ? "Last 14 days of agency tasks"
-                : `Last 14 days — ${activeType} only`}
-            </p>
-          </div>
-        </div>
-        {(() => {
-          const list =
-            activeType === "all"
-              ? recentTasks
-              : recentTasks.filter((t) => normalizeAgencyType(t.agencyType) === activeType);
-          if (list.length === 0) {
-            return (
-              <div className="text-center py-10 text-muted-foreground text-sm">
-                No agency tasks in the last 14 days.
-              </div>
-            );
-          }
-          // Group by date desc
-          const byDate: Record<string, Task[]> = {};
-          list.forEach((t) => {
-            if (!byDate[t.date]) byDate[t.date] = [];
-            byDate[t.date].push(t);
-          });
-          const dates = Object.keys(byDate).sort((a, b) => (a < b ? 1 : -1));
-          return (
-            <div className="space-y-4">
-              {dates.map((d) => (
-                <div key={d}>
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                    {formatShort(d)} ·{" "}
-                    {new Date(d + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long" })}
-                  </p>
-                  <div className="space-y-1">
-                    {byDate[d].map((t) => (
-                      <TaskRow key={t.id} task={t} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-      </div>
 
       {/* Day detail modal */}
       {clickedDate &&
