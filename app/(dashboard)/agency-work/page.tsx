@@ -15,6 +15,7 @@ import {
   generateId,
   today,
   addDays,
+  getWeekStart,
   formatDuration,
   formatDisplayDate,
 } from "@/lib/store";
@@ -86,43 +87,35 @@ export default function AgencyWorkPage() {
     .reduce((sum, t) => sum + (t.duration ?? 0), 0);
   const activeNow = agencyTasks.filter((t) => !t.completed).length;
 
-  // Pending tasks from past dates that should "carry forward" into today.
-  const carryOverTasks = agencyTasks
-    .filter((t) => t.date < todayStr && !t.completed)
-    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  // Three top-level buckets:
+  //   This Week — pending tasks with date in current ISO week (Mon-Sun),
+  //               plus any overdue pending tasks from earlier weeks.
+  //   Upcoming Weeks — pending tasks dated after this Sunday.
+  //   Done — completed tasks (any date), grouped by completion date.
+  const weekStart = getWeekStart(todayStr);
+  const weekEnd = addDays(weekStart, 6);
 
-  // For the date-grouped sections we exclude pending past tasks (they show in
-  // today's carry-over instead) so they don't appear twice.
-  const datedTasks = agencyTasks.filter(
-    (t) => !(t.date < todayStr && !t.completed)
-  );
-  const sortedTasks = datedTasks.slice().sort((a, b) => {
-    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    if (a.completed !== b.completed) return a.completed ? 1 : -1;
-    return a.createdAt < b.createdAt ? 1 : -1;
+  const thisWeekTasks = agencyTasks
+    .filter((t) => !t.completed && t.date <= weekEnd)
+    .sort((a, b) => {
+      const aOverdue = a.date < todayStr;
+      const bOverdue = b.date < todayStr;
+      if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
+      return a.date.localeCompare(b.date);
+    });
+
+  const upcomingTasks = agencyTasks
+    .filter((t) => !t.completed && t.date > weekEnd)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const doneTasks = agencyTasks.filter((t) => t.completed);
+  const doneByDate: Record<string, Task[]> = {};
+  doneTasks.forEach((t) => {
+    const key = t.completedAt ?? t.date;
+    if (!doneByDate[key]) doneByDate[key] = [];
+    doneByDate[key].push(t);
   });
-  const byDate: Record<string, Task[]> = {};
-  sortedTasks.forEach((t) => {
-    if (!byDate[t.date]) byDate[t.date] = [];
-    byDate[t.date].push(t);
-  });
-  // Make sure "today" is always present in the section list so carry-over has
-  // a home even when there are no tasks dated today.
-  if (!byDate[todayStr] && carryOverTasks.length > 0) {
-    byDate[todayStr] = [];
-  }
-  // Order: future dates first (closest first), then today, then past (newest first).
-  const futureKeys = Object.keys(byDate)
-    .filter((d) => d > todayStr)
-    .sort();
-  const pastKeys = Object.keys(byDate)
-    .filter((d) => d < todayStr)
-    .sort((a, b) => (a < b ? 1 : -1));
-  const dateKeys = [
-    ...futureKeys,
-    ...(byDate[todayStr] !== undefined ? [todayStr] : []),
-    ...pastKeys,
-  ];
+  const doneDateKeys = Object.keys(doneByDate).sort((a, b) => (a < b ? 1 : -1));
 
   // 30-day stacked chart — only completed tasks, plotted on their completedAt
   // date (the day they were ticked done), falling back to task.date for any
@@ -522,58 +515,90 @@ export default function AgencyWorkPage() {
         </div>
       )}
 
-      {/* Tasks grouped by date */}
-      <div className="mb-8">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Tasks
-        </h2>
-        {dateKeys.length === 0 && carryOverTasks.length === 0 ? (
-          <div className="bg-card border border-border rounded-lg p-10 text-center text-muted-foreground text-sm">
-            No agency tasks yet.
+      {/* This Week */}
+      <section className="mb-7">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground">
+            This Week{" "}
+            <span className="text-muted-foreground font-normal">· {thisWeekTasks.length}</span>
+          </h2>
+          <p className="text-[11px] text-muted-foreground">
+            today &rarr; this Sunday, overdue first
+          </p>
+        </div>
+        {thisWeekTasks.length === 0 ? (
+          <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
+            All clear for this week.
             <br />
             <button onClick={handleAddClick} className="mt-2 text-primary hover:underline">
-              Add your first one
+              Add a task
             </button>
           </div>
         ) : (
-          <div className="space-y-5">
-            {dateKeys.map((date) => {
-              const list = byDate[date];
-              const isToday = date === todayStr;
-              const combinedList = isToday ? [...carryOverTasks, ...list] : list;
-              const doneCount = combinedList.filter((t) => t.completed).length;
-              return (
-                <div key={date}>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-foreground">
-                      {dateHeading(date, todayStr)}
-                      {isToday && carryOverTasks.length > 0 && (
-                        <span className="ml-2 text-[11px] font-normal text-muted-foreground">
-                          (+{carryOverTasks.length} carried over)
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {doneCount}/{combinedList.length} done
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    {isToday
-                      ? combinedList.map((t) => (
-                          <TaskRow
-                            key={t.id}
-                            task={t}
-                            isCarryOver={t.date < todayStr}
-                          />
-                        ))
-                      : list.map((t) => <TaskRow key={t.id} task={t} />)}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-2">
+            {thisWeekTasks.map((t) => (
+              <TaskRow key={t.id} task={t} isCarryOver={t.date < todayStr} />
+            ))}
           </div>
         )}
-      </div>
+      </section>
+
+      {/* Upcoming Weeks */}
+      <section className="mb-7">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground">
+            Upcoming Weeks{" "}
+            <span className="text-muted-foreground font-normal">· {upcomingTasks.length}</span>
+          </h2>
+          <p className="text-[11px] text-muted-foreground">
+            anything beyond this Sunday
+          </p>
+        </div>
+        {upcomingTasks.length === 0 ? (
+          <div className="bg-card border border-border rounded-lg p-5 text-center text-muted-foreground text-xs">
+            Nothing planned beyond this week yet.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {upcomingTasks.map((t) => (
+              <TaskRow key={t.id} task={t} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Done */}
+      <section className="mb-7">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground">
+            Done{" "}
+            <span className="text-muted-foreground font-normal">· {doneTasks.length}</span>
+          </h2>
+          <p className="text-[11px] text-muted-foreground">
+            grouped by the day you ticked it off
+          </p>
+        </div>
+        {doneTasks.length === 0 ? (
+          <div className="bg-card border border-border rounded-lg p-5 text-center text-muted-foreground text-xs">
+            Nothing completed yet.
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {doneDateKeys.map((d) => (
+              <div key={d}>
+                <p className="text-xs font-semibold text-muted-foreground mb-2">
+                  {dateHeading(d, todayStr)}
+                </p>
+                <div className="space-y-2">
+                  {doneByDate[d].map((t) => (
+                    <TaskRow key={t.id} task={t} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* 30-day chart */}
       {hasChartData && (

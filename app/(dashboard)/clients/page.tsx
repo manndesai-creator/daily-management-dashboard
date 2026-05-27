@@ -109,6 +109,7 @@ export default function ClientsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [clickedDate, setClickedDate] = useState<string | null>(null);
+  const [chartClientId, setChartClientId] = useState<string | "all">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const todayStr = today();
@@ -588,11 +589,49 @@ export default function ClientsPage() {
       {/* 30-day overview chart */}
       {clients.length > 0 && hasChartData && (
         <div className="mt-8 bg-card border border-border rounded-lg p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Last 30 Days</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Completed client tasks per day. Click a bar to see details.
-            </p>
+          <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Last 30 Days</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Completed client tasks per day. Click a bar to see details.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setChartClientId("all")}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                  chartClientId === "all"
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                )}
+              >
+                All Work
+              </button>
+              {clientsWithActivity.map((c) => {
+                const hex = CLIENT_COLORS.find((cc) => cc.name === c.color)?.hex ?? "#3b82f6";
+                const active = chartClientId === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setChartClientId(c.id)}
+                    className={cn(
+                      "px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5",
+                      active ? "border-transparent" : "border-border text-muted-foreground hover:text-foreground"
+                    )}
+                    style={active ? { backgroundColor: `${hex}22`, color: hex } : undefined}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: hex }}
+                    />
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -634,40 +673,44 @@ export default function ClientsPage() {
                   });
                 }}
               />
-              {clientsWithActivity.map((c) => {
-                const hex = CLIENT_COLORS.find((cc) => cc.name === c.color)?.hex ?? "#3b82f6";
-                return (
-                  <Bar
-                    key={c.id}
-                    dataKey={c.id}
-                    name={c.id}
-                    stackId="a"
-                    fill={hex}
-                    cursor="pointer"
-                    onClick={(data: unknown) => {
-                      const d = data as { payload?: { date?: string } };
-                      if (d.payload?.date) setClickedDate(d.payload.date);
-                    }}
-                  />
-                );
-              })}
+              {clientsWithActivity
+                .filter((c) => chartClientId === "all" || c.id === chartClientId)
+                .map((c) => {
+                  const hex = CLIENT_COLORS.find((cc) => cc.name === c.color)?.hex ?? "#3b82f6";
+                  return (
+                    <Bar
+                      key={c.id}
+                      dataKey={c.id}
+                      name={c.id}
+                      stackId="a"
+                      fill={hex}
+                      cursor="pointer"
+                      onClick={(data: unknown) => {
+                        const d = data as { payload?: { date?: string } };
+                        if (d.payload?.date) setClickedDate(d.payload.date);
+                      }}
+                    />
+                  );
+                })}
             </BarChart>
           </ResponsiveContainer>
 
-          <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-border">
-            {clientsWithActivity.map((c) => {
-              const hex = CLIENT_COLORS.find((cc) => cc.name === c.color)?.hex ?? "#3b82f6";
-              return (
-                <div key={c.id} className="flex items-center gap-1.5">
-                  <div
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: hex }}
-                  />
-                  <span className="text-xs text-muted-foreground">{c.name}</span>
-                </div>
-              );
-            })}
-          </div>
+          {chartClientId === "all" && (
+            <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-border">
+              {clientsWithActivity.map((c) => {
+                const hex = CLIENT_COLORS.find((cc) => cc.name === c.color)?.hex ?? "#3b82f6";
+                return (
+                  <div key={c.id} className="flex items-center gap-1.5">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: hex }}
+                    />
+                    <span className="text-xs text-muted-foreground">{c.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

@@ -31,6 +31,7 @@ export interface Task {
 
 export type CaptureType = "quick" | "idea" | "reminder";
 export type CaptureTimeframe = "1-2 weeks" | "2-3 weeks" | "after a month";
+export type CaptureRelatedTo = "client" | "agency" | "learning" | "other";
 
 export interface Capture {
   id: string;
@@ -41,6 +42,8 @@ export interface Capture {
   emoji?: string;
   timeframe?: CaptureTimeframe;
   reminderDate?: string;
+  relatedToCategory?: CaptureRelatedTo;
+  relatedToValue?: string;
   createdAt: string;
   processed: boolean;
 }

@@ -120,12 +120,14 @@ function mapTask(row: any): Task {
 // is treated as a "quick" capture.
 type CaptureMeta = {
   __cap: 1;
-  type: "idea" | "reminder";
+  type: Capture["type"];
   title?: string;
   description?: string;
   emoji?: string;
   timeframe?: Capture["timeframe"];
   reminderDate?: string;
+  relatedToCategory?: Capture["relatedToCategory"];
+  relatedToValue?: string;
 };
 
 function unpackCaptureContent(content: string): Omit<Capture, "id" | "createdAt" | "processed" | "content"> {
@@ -140,6 +142,8 @@ function unpackCaptureContent(content: string): Omit<Capture, "id" | "createdAt"
           emoji: parsed.emoji,
           timeframe: parsed.timeframe,
           reminderDate: parsed.reminderDate,
+          relatedToCategory: parsed.relatedToCategory,
+          relatedToValue: parsed.relatedToValue,
         };
       }
     } catch {
@@ -153,7 +157,10 @@ function unpackCaptureContent(content: string): Omit<Capture, "id" | "createdAt"
 }
 
 function packCaptureContent(c: Capture): string {
-  if (c.type === "quick") return c.description ?? c.content ?? "";
+  // Plain quick captures with no category stay as plain text for compat.
+  if (c.type === "quick" && !c.relatedToCategory) {
+    return c.description ?? c.content ?? "";
+  }
   const meta: CaptureMeta = {
     __cap: 1,
     type: c.type,
@@ -162,6 +169,8 @@ function packCaptureContent(c: Capture): string {
     emoji: c.emoji,
     timeframe: c.timeframe,
     reminderDate: c.reminderDate,
+    relatedToCategory: c.relatedToCategory,
+    relatedToValue: c.relatedToValue,
   };
   return JSON.stringify(meta);
 }
