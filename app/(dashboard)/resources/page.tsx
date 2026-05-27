@@ -227,9 +227,15 @@ export default function LearningPage() {
 
   const knownCategorySet = new Set(RESOURCE_CATEGORIES);
 
+  // "All" intentionally hides Done items so the primary list shows only what
+  // is still left to do. The Done pill is the only way to view completed items.
+  const activeResources = resources.filter((r) => {
+    if (filterStatus === "all") return r.status !== "done";
+    return r.status === filterStatus;
+  });
+
   const q = searchQuery.trim().toLowerCase();
-  const filtered = resources.filter((r) => {
-    if (filterStatus !== "all" && r.status !== filterStatus) return false;
+  const filtered = activeResources.filter((r) => {
     if (filterCategory !== "all") {
       if (filterCategory === "Uncategorised") {
         if (knownCategorySet.has(r.category)) return false;
@@ -249,14 +255,16 @@ export default function LearningPage() {
   })).filter((g) => g.items.length > 0);
   const legacyItems = filtered.filter((r) => !knownCategorySet.has(r.category));
 
-  // Counts (across all resources, not filtered) for the sidebar
+  // Sidebar counts reflect the current status filter so the numbers line up
+  // with what's actually shown.
   const categoryCounts: Record<string, number> = {};
   RESOURCE_CATEGORIES.forEach((cat) => {
-    categoryCounts[cat] = resources.filter((r) => r.category === cat).length;
+    categoryCounts[cat] = activeResources.filter((r) => r.category === cat).length;
   });
-  categoryCounts.Uncategorised = resources.filter(
+  categoryCounts.Uncategorised = activeResources.filter(
     (r) => !knownCategorySet.has(r.category)
   ).length;
+  const allActiveCount = activeResources.length;
 
   // 15-day chart data — counts only DONE resources on their completion date.
   // For done resources missing completedAt (legacy), fall back to createdAt.
@@ -552,8 +560,9 @@ export default function LearningPage() {
               ? "bg-foreground text-background"
               : "bg-secondary text-muted-foreground hover:text-foreground"
           )}
+          title="To Watch + In Progress (excludes Done)"
         >
-          All ({resources.length})
+          Active ({resources.filter((r) => r.status !== "done").length})
         </button>
         {(Object.entries(STATUS_META) as [StatusKey, (typeof STATUS_META)[StatusKey]][]).map(
           ([key, meta]) => {
@@ -647,8 +656,8 @@ export default function LearningPage() {
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               )}
             >
-              <span>All</span>
-              <span className="text-[10px] tabular-nums">{resources.length}</span>
+              <span>All sources</span>
+              <span className="text-[10px] tabular-nums">{allActiveCount}</span>
             </button>
             {RESOURCE_CATEGORIES.map((cat) => {
               const count = categoryCounts[cat] ?? 0;
