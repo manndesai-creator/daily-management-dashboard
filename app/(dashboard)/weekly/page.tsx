@@ -100,7 +100,7 @@ export default function WeeklyPage() {
       name: "Resources Done",
       value: weekDoneResources.length,
       displayValue: `${weekDoneResources.length} done`,
-      color: "#0ea5e9",
+      color: "#0d9488",
     });
   }
   const hasChartData = pieData.length > 0 || barData.some((d) =>
@@ -156,7 +156,7 @@ export default function WeeklyPage() {
         </div>
       </div>
 
-      <div className="flex gap-5">
+      <div className="flex flex-col lg:flex-row gap-5">
         {/* Week grid */}
         <div className="flex-1 overflow-x-auto">
           <div className="grid grid-cols-7 gap-2 min-w-[640px]">
@@ -252,7 +252,7 @@ export default function WeeklyPage() {
 
         {/* Completion stat */}
         {totalWeekItems > 0 && (
-          <div className="w-44 flex-shrink-0">
+          <div className="w-full lg:w-44 lg:flex-shrink-0">
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                 Completion
@@ -318,7 +318,7 @@ export default function WeeklyPage() {
                   <Bar key={cat} dataKey={cat} name={cat} stackId="a" fill={CAT_HEX[cat]} />
                 ))}
                 {hasResourceData && (
-                  <Bar dataKey="resources" name="resources" stackId="a" fill="#0ea5e9" />
+                  <Bar dataKey="resources" name="resources" stackId="a" fill="#0d9488" />
                 )}
               </BarChart>
             </ResponsiveContainer>

@@ -641,7 +641,8 @@ export default function ClientsPage() {
                 tick={{ fontSize: 10, fill: "hsl(240 5% 55%)" }}
                 axisLine={false}
                 tickLine={false}
-                interval={2}
+                interval="preserveStartEnd"
+                minTickGap={20}
               />
               <YAxis
                 allowDecimals={false}

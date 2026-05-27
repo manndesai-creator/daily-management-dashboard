@@ -611,7 +611,7 @@ export default function AgencyWorkPage() {
                   </p>
                   <div className="space-y-2">
                     {doneByDate[d].map((t) => (
-                      <TaskRow key={t.id} task={t} noStrike />
+                      <TaskRow key={t.id} task={t} />
                     ))}
                   </div>
                 </div>
@@ -676,7 +676,8 @@ export default function AgencyWorkPage() {
                 tick={{ fontSize: 10, fill: "hsl(240 5% 55%)" }}
                 axisLine={false}
                 tickLine={false}
-                interval={2}
+                interval="preserveStartEnd"
+                minTickGap={20}
               />
               <YAxis
                 allowDecimals={false}
