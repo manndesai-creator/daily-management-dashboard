@@ -45,32 +45,58 @@ function mapClient(row: any): Client {
   };
 }
 
-// Agency type is encoded as an `##AGENCY:Type##` prefix inside the `notes`
-// column so we don't depend on a separate `agency_type` column existing.
-const AGENCY_PREFIX_RE = /^##AGENCY:([^#\n]+)##\n?/;
+// Task notes column can hold two optional structured prefixes followed by the
+// real notes. Order is AGENCY then DONE, both optional:
+//   ##AGENCY:Branding##\n##DONE:2026-05-28##\nReal notes here
+// Storing structured metadata inside notes avoids needing extra Supabase
+// columns. Agency type and completion date are the two pieces we track.
+const TASK_AGENCY_RE = /^##AGENCY:([^#\n]+)##\n?/;
+const TASK_DONE_RE = /^##DONE:(\d{4}-\d{2}-\d{2})##\n?/;
 
 function unpackTaskNotes(stored: string | null | undefined): {
   notes: string | undefined;
   agencyType: string | undefined;
+  completedAt: string | undefined;
 } {
-  if (!stored) return { notes: undefined, agencyType: undefined };
-  const match = stored.match(AGENCY_PREFIX_RE);
-  if (match) {
-    const rest = stored.slice(match[0].length);
-    return { agencyType: match[1], notes: rest.length > 0 ? rest : undefined };
+  if (!stored) return { notes: undefined, agencyType: undefined, completedAt: undefined };
+  let rest = stored;
+  let agencyType: string | undefined;
+  let completedAt: string | undefined;
+
+  const agencyMatch = rest.match(TASK_AGENCY_RE);
+  if (agencyMatch) {
+    agencyType = agencyMatch[1];
+    rest = rest.slice(agencyMatch[0].length);
   }
-  return { notes: stored, agencyType: undefined };
+
+  const doneMatch = rest.match(TASK_DONE_RE);
+  if (doneMatch) {
+    completedAt = doneMatch[1];
+    rest = rest.slice(doneMatch[0].length);
+  }
+
+  return {
+    notes: rest.length > 0 ? rest : undefined,
+    agencyType,
+    completedAt,
+  };
 }
 
-function packTaskNotes(notes: string | undefined, agencyType: string | undefined): string | null {
-  const n = notes ?? "";
-  if (agencyType) return `##AGENCY:${agencyType}##\n${n}`;
-  return n.length > 0 ? n : null;
+function packTaskNotes(
+  notes: string | undefined,
+  agencyType: string | undefined,
+  completedAt: string | undefined
+): string | null {
+  let prefix = "";
+  if (agencyType) prefix += `##AGENCY:${agencyType}##\n`;
+  if (completedAt) prefix += `##DONE:${completedAt}##\n`;
+  const full = prefix + (notes ?? "");
+  return full.length > 0 ? full : null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapTask(row: any): Task {
-  const { notes, agencyType } = unpackTaskNotes(row.notes);
+  const { notes, agencyType, completedAt } = unpackTaskNotes(row.notes);
   return {
     id: row.id,
     date: row.date,
@@ -84,6 +110,7 @@ function mapTask(row: any): Task {
     notes,
     duration: row.duration ?? undefined,
     completed: row.completed,
+    completedAt,
     createdAt: row.created_at,
   };
 }
@@ -295,24 +322,32 @@ export function useTasks() {
   }, []);
 
   const addTask = useCallback((task: Task) => {
-    setTasks((prev) => [task, ...prev]);
-    // Only send columns that have values. Some optional columns (url,
-    // agency_type) may not exist in older Supabase schemas, and sending even
-    // a null value would crash the insert with a "column does not exist" 400.
+    // Auto-stamp completedAt if the task is being created already completed.
+    const completedAt =
+      task.completedAt ?? (task.completed ? today() : undefined);
+    const finalTask: Task = { ...task, completedAt };
+    setTasks((prev) => [finalTask, ...prev]);
+    // Only send columns that have values. Some optional columns (url) may not
+    // exist in older Supabase schemas, and sending even a null value would
+    // crash the insert with a "column does not exist" 400.
     const row: Record<string, unknown> = {
-      id: task.id,
-      date: task.date,
-      category: task.category,
-      title: task.title,
-      completed: task.completed,
-      created_at: task.createdAt,
+      id: finalTask.id,
+      date: finalTask.date,
+      category: finalTask.category,
+      title: finalTask.title,
+      completed: finalTask.completed,
+      created_at: finalTask.createdAt,
     };
-    if (task.clientId) row.client_id = task.clientId;
-    if (task.clientName) row.client_name = task.clientName;
-    if (task.learningType) row.learning_type = task.learningType;
-    if (task.url) row.url = task.url;
-    if (task.duration) row.duration = task.duration;
-    const packedNotes = packTaskNotes(task.notes, task.agencyType);
+    if (finalTask.clientId) row.client_id = finalTask.clientId;
+    if (finalTask.clientName) row.client_name = finalTask.clientName;
+    if (finalTask.learningType) row.learning_type = finalTask.learningType;
+    if (finalTask.url) row.url = finalTask.url;
+    if (finalTask.duration) row.duration = finalTask.duration;
+    const packedNotes = packTaskNotes(
+      finalTask.notes,
+      finalTask.agencyType,
+      finalTask.completedAt
+    );
     if (packedNotes) row.notes = packedNotes;
     supabase.from("tasks").insert(row).then(({ error }) => {
       if (error) {
@@ -324,7 +359,20 @@ export function useTasks() {
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
     const current = tasksRef.current.find((t) => t.id === id);
     if (!current) return;
-    const merged: Task = { ...current, ...updates };
+
+    // Auto-manage completedAt when the task is ticked done or un-ticked.
+    let nextCompletedAt = current.completedAt;
+    if ("completedAt" in updates) {
+      nextCompletedAt = updates.completedAt;
+    } else if (updates.completed !== undefined) {
+      if (updates.completed) {
+        if (!current.completedAt) nextCompletedAt = today();
+      } else {
+        nextCompletedAt = undefined;
+      }
+    }
+
+    const merged: Task = { ...current, ...updates, completedAt: nextCompletedAt };
     setTasks((prev) => prev.map((t) => (t.id === id ? merged : t)));
 
     const db: Record<string, unknown> = {};
@@ -338,9 +386,12 @@ export function useTasks() {
     if (updates.learningType !== undefined) db.learning_type = updates.learningType ?? null;
     if (updates.date !== undefined) db.date = updates.date;
 
-    // Re-pack notes whenever notes OR agencyType might have changed
-    if ("notes" in updates || "agencyType" in updates) {
-      db.notes = packTaskNotes(merged.notes, merged.agencyType);
+    // Re-pack notes whenever notes, agencyType or completedAt could have changed
+    const notesChanged = "notes" in updates;
+    const agencyChanged = "agencyType" in updates;
+    const completedAtChanged = nextCompletedAt !== current.completedAt;
+    if (notesChanged || agencyChanged || completedAtChanged) {
+      db.notes = packTaskNotes(merged.notes, merged.agencyType, merged.completedAt);
     }
 
     supabase.from("tasks").update(db).eq("id", id)

@@ -31,6 +31,8 @@ const MINUTE_OPTIONS = [0, 15, 30, 45];
 const INPUT_CLS =
   "w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
 
+// Returns a positive number when `dateStr` is in the past relative to
+// `fromStr`, zero when same day, negative when in the future.
 function daysSince(dateStr: string, fromStr: string): number {
   const [y1, m1, d1] = dateStr.split("-").map(Number);
   const [y2, m2, d2] = fromStr.split("-").map(Number);
@@ -44,7 +46,8 @@ function dateHeading(dateStr: string, todayStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
   if (diff === 0) return "Today";
-  if (diff === -1) return "Yesterday";
+  if (diff === 1) return "Yesterday";
+  if (diff === -1) return "Tomorrow";
   return date.toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
@@ -83,9 +86,17 @@ export default function AgencyWorkPage() {
     .reduce((sum, t) => sum + (t.duration ?? 0), 0);
   const activeNow = agencyTasks.filter((t) => !t.completed).length;
 
-  // Group all agency tasks by date (descending). Tasks within a date are sorted
-  // with active items first, then completed.
-  const sortedTasks = agencyTasks.slice().sort((a, b) => {
+  // Pending tasks from past dates that should "carry forward" into today.
+  const carryOverTasks = agencyTasks
+    .filter((t) => t.date < todayStr && !t.completed)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  // For the date-grouped sections we exclude pending past tasks (they show in
+  // today's carry-over instead) so they don't appear twice.
+  const datedTasks = agencyTasks.filter(
+    (t) => !(t.date < todayStr && !t.completed)
+  );
+  const sortedTasks = datedTasks.slice().sort((a, b) => {
     if (a.date !== b.date) return a.date < b.date ? 1 : -1;
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     return a.createdAt < b.createdAt ? 1 : -1;
@@ -95,11 +106,33 @@ export default function AgencyWorkPage() {
     if (!byDate[t.date]) byDate[t.date] = [];
     byDate[t.date].push(t);
   });
-  const dateKeys = Object.keys(byDate).sort((a, b) => (a < b ? 1 : -1));
+  // Make sure "today" is always present in the section list so carry-over has
+  // a home even when there are no tasks dated today.
+  if (!byDate[todayStr] && carryOverTasks.length > 0) {
+    byDate[todayStr] = [];
+  }
+  // Order: future dates first (closest first), then today, then past (newest first).
+  const futureKeys = Object.keys(byDate)
+    .filter((d) => d > todayStr)
+    .sort();
+  const pastKeys = Object.keys(byDate)
+    .filter((d) => d < todayStr)
+    .sort((a, b) => (a < b ? 1 : -1));
+  const dateKeys = [
+    ...futureKeys,
+    ...(byDate[todayStr] !== undefined ? [todayStr] : []),
+    ...pastKeys,
+  ];
 
-  // 30-day stacked chart — only completed tasks, by their task.date
+  // 30-day stacked chart — only completed tasks, plotted on their completedAt
+  // date (the day they were ticked done), falling back to task.date for any
+  // legacy completed tasks that don't yet have a completedAt stamp.
   const last30Start = addDays(todayStr, -29);
   const last30Days = Array.from({ length: 30 }, (_, i) => addDays(last30Start, i));
+  function effectiveDoneDate(t: Task): string | null {
+    if (!t.completed) return null;
+    return t.completedAt ?? t.date;
+  }
   const chartData = last30Days.map((date) => {
     const [, m, d] = date.split("-");
     const entry: Record<string, string | number> = {
@@ -108,7 +141,9 @@ export default function AgencyWorkPage() {
     };
     AGENCY_TYPES.forEach((type) => {
       entry[type] = agencyTasks.filter(
-        (t) => t.date === date && t.completed && normalizeAgencyType(t.agencyType) === type
+        (t) =>
+          effectiveDoneDate(t) === date &&
+          normalizeAgencyType(t.agencyType) === type
       ).length;
     });
     return entry;
@@ -202,13 +237,26 @@ export default function AgencyWorkPage() {
 
   // ─── UI bits ───────────────────────────────────────────────────────────────
 
-  function TaskRow({ task }: { task: Task }) {
+  function TaskRow({ task, isCarryOver }: { task: Task; isCarryOver?: boolean }) {
     const type = normalizeAgencyType(task.agencyType);
     const tHex = AGENCY_TYPE_HEX[type] ?? "#94a3b8";
     const emoji = AGENCY_TYPE_EMOJI[type] ?? "🔧";
     const stuckDays = daysSince(task.date, todayStr);
     const isStuck = !task.completed && stuckDays > 7;
     const isEditing = editingId === task.id;
+    const [py, pm, pd] = task.date.split("-").map(Number);
+    const plannedLabel = new Date(py, pm - 1, pd).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+    });
+    let completedLabel: string | null = null;
+    if (task.completedAt) {
+      const [cy, cm, cd] = task.completedAt.split("-").map(Number);
+      completedLabel = new Date(cy, cm - 1, cd).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+      });
+    }
     return (
       <div
         className={cn(
@@ -252,6 +300,11 @@ export default function AgencyWorkPage() {
             >
               {type}
             </span>
+            {isCarryOver && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                from {plannedLabel}
+              </span>
+            )}
             {isStuck && (
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 flex items-center gap-1">
                 <AlertTriangle className="w-2.5 h-2.5" />
@@ -260,6 +313,16 @@ export default function AgencyWorkPage() {
             )}
           </div>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <span className="text-[11px] text-violet-600 flex items-center gap-0.5">
+              <CalendarIcon className="w-3 h-3" />
+              Planned {plannedLabel}
+            </span>
+            {completedLabel && (
+              <span className="text-[11px] text-emerald-600 flex items-center gap-0.5">
+                <Check className="w-3 h-3" />
+                Done {completedLabel}
+              </span>
+            )}
             {task.duration ? (
               <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -464,7 +527,7 @@ export default function AgencyWorkPage() {
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           Tasks
         </h2>
-        {dateKeys.length === 0 ? (
+        {dateKeys.length === 0 && carryOverTasks.length === 0 ? (
           <div className="bg-card border border-border rounded-lg p-10 text-center text-muted-foreground text-sm">
             No agency tasks yet.
             <br />
@@ -476,21 +539,34 @@ export default function AgencyWorkPage() {
           <div className="space-y-5">
             {dateKeys.map((date) => {
               const list = byDate[date];
-              const doneCount = list.filter((t) => t.completed).length;
+              const isToday = date === todayStr;
+              const combinedList = isToday ? [...carryOverTasks, ...list] : list;
+              const doneCount = combinedList.filter((t) => t.completed).length;
               return (
                 <div key={date}>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-semibold text-foreground">
                       {dateHeading(date, todayStr)}
+                      {isToday && carryOverTasks.length > 0 && (
+                        <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+                          (+{carryOverTasks.length} carried over)
+                        </span>
+                      )}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      {doneCount}/{list.length} done
+                      {doneCount}/{combinedList.length} done
                     </p>
                   </div>
                   <div className="space-y-2">
-                    {list.map((t) => (
-                      <TaskRow key={t.id} task={t} />
-                    ))}
+                    {isToday
+                      ? combinedList.map((t) => (
+                          <TaskRow
+                            key={t.id}
+                            task={t}
+                            isCarryOver={t.date < todayStr}
+                          />
+                        ))
+                      : list.map((t) => <TaskRow key={t.id} task={t} />)}
                   </div>
                 </div>
               );
@@ -587,7 +663,9 @@ export default function AgencyWorkPage() {
             month: "long",
             year: "numeric",
           });
-          const dayTasks = agencyTasks.filter((t) => t.date === clickedDate);
+          const dayTasks = agencyTasks.filter(
+            (t) => effectiveDoneDate(t) === clickedDate
+          );
           const byType = AGENCY_TYPES.map((type) => ({
             type,
             items: dayTasks.filter((t) => normalizeAgencyType(t.agencyType) === type),
@@ -606,7 +684,7 @@ export default function AgencyWorkPage() {
                   <div>
                     <h3 className="text-lg font-bold text-foreground">{formattedDate}</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {dayTasks.length} agency task{dayTasks.length !== 1 ? "s" : ""}
+                      {dayTasks.length} agency task{dayTasks.length !== 1 ? "s" : ""} completed
                     </p>
                   </div>
                   <button

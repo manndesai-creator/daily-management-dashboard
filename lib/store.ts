@@ -25,6 +25,7 @@ export interface Task {
   notes?: string;
   duration?: number;
   completed: boolean;
+  completedAt?: string;
   createdAt: string;
 }
 
