@@ -128,6 +128,7 @@ type CaptureMeta = {
   reminderDate?: string;
   relatedToCategory?: Capture["relatedToCategory"];
   relatedToValue?: string;
+  attachments?: Capture["attachments"];
 };
 
 function unpackCaptureContent(content: string): Omit<Capture, "id" | "createdAt" | "processed" | "content"> {
@@ -144,6 +145,7 @@ function unpackCaptureContent(content: string): Omit<Capture, "id" | "createdAt"
           reminderDate: parsed.reminderDate,
           relatedToCategory: parsed.relatedToCategory,
           relatedToValue: parsed.relatedToValue,
+          attachments: parsed.attachments,
         };
       }
     } catch {
@@ -157,8 +159,10 @@ function unpackCaptureContent(content: string): Omit<Capture, "id" | "createdAt"
 }
 
 function packCaptureContent(c: Capture): string {
-  // Plain quick captures with no category stay as plain text for compat.
-  if (c.type === "quick" && !c.relatedToCategory) {
+  const hasAttachments = c.attachments && c.attachments.length > 0;
+  // Plain quick captures with no category and no attachments stay as plain
+  // text for backward compatibility.
+  if (c.type === "quick" && !c.relatedToCategory && !hasAttachments) {
     return c.description ?? c.content ?? "";
   }
   const meta: CaptureMeta = {
@@ -171,6 +175,7 @@ function packCaptureContent(c: Capture): string {
     reminderDate: c.reminderDate,
     relatedToCategory: c.relatedToCategory,
     relatedToValue: c.relatedToValue,
+    attachments: hasAttachments ? c.attachments : undefined,
   };
   return JSON.stringify(meta);
 }
@@ -456,7 +461,10 @@ export function useCaptures() {
           "description" in updates ||
           "emoji" in updates ||
           "timeframe" in updates ||
-          "reminderDate" in updates;
+          "reminderDate" in updates ||
+          "relatedToCategory" in updates ||
+          "relatedToValue" in updates ||
+          "attachments" in updates;
         if (structuredFieldsTouched) {
           merged.content = packCaptureContent(merged);
         }
@@ -473,7 +481,10 @@ export function useCaptures() {
       "description" in updates ||
       "emoji" in updates ||
       "timeframe" in updates ||
-      "reminderDate" in updates;
+      "reminderDate" in updates ||
+      "relatedToCategory" in updates ||
+      "relatedToValue" in updates ||
+      "attachments" in updates;
     if (structuredFieldsTouched) {
       const current = captures.find((c) => c.id === id);
       if (current) {

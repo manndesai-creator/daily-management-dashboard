@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useCaptures, useClients } from "@/lib/db";
 import {
   Capture,
+  CaptureAttachment,
   CaptureType,
   CaptureTimeframe,
   CaptureRelatedTo,
@@ -14,12 +15,22 @@ import {
   generateId,
   today,
   addDays,
+  extractYouTubeId,
 } from "@/lib/store";
+import {
+  uploadCaptureFile,
+  deleteCaptureFile,
+  isImageType,
+  isPdfType,
+  formatFileSize,
+} from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Zap, Check, Trash2, Lightbulb, Bell, NotebookPen,
-  Calendar as CalendarIcon, Edit2, X,
+  Calendar as CalendarIcon, Edit2, X, Paperclip, FileText,
+  Link as LinkIcon, Upload, ExternalLink, Youtube, Image as ImageIcon,
+  Download, Loader2,
 } from "lucide-react";
 
 const IDEA_EMOJIS = ["💡", "🎯", "🚀", "⭐", "✨", "🔥", "📝", "💭", "🌟", "💪", "🎨", "📈"];
@@ -67,6 +78,14 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function getDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
 function daysUntil(dateStr: string): number {
   const todayStr = today();
   const [y1, m1, d1] = todayStr.split("-").map(Number);
@@ -76,6 +95,175 @@ function daysUntil(dateStr: string): number {
   return Math.round((b - a) / 86400000);
 }
 
+function AttachmentEditor({
+  attachment,
+  onChange,
+  onRemove,
+}: {
+  attachment: CaptureAttachment;
+  onChange: (patch: Partial<CaptureAttachment>) => void;
+  onRemove: () => void;
+}) {
+  const a = attachment;
+
+  if (a.type === "text") {
+    return (
+      <div className="border border-border rounded-md p-3 bg-background">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <FileText className="w-3 h-3" />
+            Note
+          </div>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+            aria-label="Remove note"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <input
+          type="text"
+          placeholder="Note title (optional)"
+          value={a.title ?? ""}
+          onChange={(e) => onChange({ title: e.target.value })}
+          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium mb-2 focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        <textarea
+          placeholder="Paste long notes, doc content, snippets…"
+          value={a.content}
+          onChange={(e) => onChange({ content: e.target.value })}
+          rows={4}
+          className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring resize-y"
+        />
+      </div>
+    );
+  }
+
+  if (a.type === "link") {
+    const domain = a.content ? getDomain(a.content) : "";
+    return (
+      <div className="border border-border rounded-md p-3 bg-background">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            {a.youtubeId ? (
+              <Youtube className="w-3 h-3 text-rose-500" />
+            ) : (
+              <LinkIcon className="w-3 h-3" />
+            )}
+            Link
+          </div>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+            aria-label="Remove link"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <input
+          type="text"
+          placeholder="Optional label (e.g. Reference doc)"
+          value={a.title ?? ""}
+          onChange={(e) => onChange({ title: e.target.value })}
+          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs mb-2 focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        <input
+          type="url"
+          placeholder="Paste any URL — YouTube, article, doc, anywhere"
+          value={a.content}
+          onChange={(e) => onChange({ content: e.target.value })}
+          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        {a.youtubeId && a.thumbnail && (
+          <div className="mt-2 flex items-center gap-2">
+            <img
+              src={a.thumbnail}
+              alt=""
+              className="w-20 h-12 object-cover rounded border border-border"
+            />
+            <span className="text-[11px] text-muted-foreground">
+              YouTube · preview will show in the saved view
+            </span>
+          </div>
+        )}
+        {!a.youtubeId && a.content && domain && (
+          <p className="mt-2 text-[11px] text-muted-foreground flex items-center gap-1">
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+              alt=""
+              className="w-3 h-3 rounded"
+            />
+            {domain}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // file
+  const fileIsImage = isImageType(a.fileType);
+  const fileIsPdf = isPdfType(a.fileType);
+  return (
+    <div className="border border-border rounded-md p-3 bg-background">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          {fileIsImage ? (
+            <ImageIcon className="w-3 h-3" />
+          ) : (
+            <FileText className="w-3 h-3" />
+          )}
+          File
+        </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+          aria-label="Remove file"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="flex items-center gap-3">
+        {fileIsImage ? (
+          <img
+            src={a.content}
+            alt=""
+            className="w-14 h-14 object-cover rounded border border-border flex-shrink-0"
+          />
+        ) : (
+          <div
+            className={cn(
+              "w-14 h-14 rounded flex items-center justify-center flex-shrink-0",
+              fileIsPdf ? "bg-rose-50 text-rose-600" : "bg-secondary text-muted-foreground"
+            )}
+          >
+            <FileText className="w-6 h-6" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium truncate">{a.fileName ?? "File"}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {formatFileSize(a.fileSize)}
+            {a.fileType && ` · ${a.fileType}`}
+          </p>
+        </div>
+        <a
+          href={a.content}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+          aria-label="Open file"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function QuickCapturePage() {
   const { captures, addCapture, updateCapture, deleteCapture, clearProcessed } = useCaptures();
   const { clients } = useClients();
@@ -83,6 +271,11 @@ export default function QuickCapturePage() {
   const [filter, setFilter] = useState<"inbox" | "ideas" | "reminders" | "processed" | "all">("inbox");
   const [filterRelated, setFilterRelated] = useState<CaptureRelatedTo | "all">("all");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewingCaptureId, setViewingCaptureId] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<CaptureAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state (per-mode)
   const [quickInput, setQuickInput] = useState("");
@@ -111,6 +304,8 @@ export default function QuickCapturePage() {
     setReminderDate(addDays(today(), 7));
     setRelCat("");
     setRelVal("");
+    setAttachments([]);
+    setUploadError(null);
   }
 
   function buildPayload(): Partial<Capture> | null {
@@ -149,9 +344,10 @@ export default function QuickCapturePage() {
       relCat && relVal
         ? { relatedToCategory: relCat as CaptureRelatedTo, relatedToValue: relVal }
         : { relatedToCategory: undefined, relatedToValue: undefined };
+    const attachmentPayload = attachments.length > 0 ? attachments : undefined;
 
     if (editingId) {
-      updateCapture(editingId, { ...base, ...related });
+      updateCapture(editingId, { ...base, ...related, attachments: attachmentPayload });
       setEditingId(null);
     } else {
       const c: Capture = {
@@ -160,12 +356,98 @@ export default function QuickCapturePage() {
         type: (base.type ?? "quick") as CaptureType,
         ...base,
         ...related,
+        attachments: attachmentPayload,
         createdAt: new Date().toISOString(),
         processed: false,
       };
       addCapture(c);
     }
     resetForms();
+  }
+
+  function addTextAttachment() {
+    setAttachments((prev) => [
+      ...prev,
+      {
+        id: generateId(),
+        type: "text",
+        content: "",
+        title: "",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  }
+
+  function addLinkAttachment() {
+    setAttachments((prev) => [
+      ...prev,
+      {
+        id: generateId(),
+        type: "link",
+        content: "",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  }
+
+  async function uploadFileAttachment(file: File) {
+    setUploadError(null);
+    setUploading(true);
+    const attachmentId = generateId();
+    const result = await uploadCaptureFile(attachmentId, file);
+    setUploading(false);
+    if (!result.ok) {
+      setUploadError(result.error);
+      return;
+    }
+    setAttachments((prev) => [
+      ...prev,
+      {
+        id: attachmentId,
+        type: "file",
+        content: result.url,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        storagePath: result.path,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  }
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    for (let i = 0; i < files.length; i++) {
+      await uploadFileAttachment(files[i]);
+    }
+    e.target.value = "";
+  }
+
+  async function removeAttachment(attachmentId: string) {
+    const target = attachments.find((a) => a.id === attachmentId);
+    setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    if (target?.type === "file" && target.storagePath) {
+      await deleteCaptureFile(target.storagePath);
+    }
+  }
+
+  function updateAttachment(attachmentId: string, patch: Partial<CaptureAttachment>) {
+    setAttachments((prev) =>
+      prev.map((a) => {
+        if (a.id !== attachmentId) return a;
+        const next = { ...a, ...patch };
+        // For links, refresh derived YouTube id when URL changes
+        if (next.type === "link" && "content" in patch) {
+          const ytId = extractYouTubeId(next.content) ?? undefined;
+          next.youtubeId = ytId;
+          next.thumbnail = ytId
+            ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
+            : undefined;
+        }
+        return next;
+      })
+    );
   }
 
   function handleEdit(capture: Capture) {
@@ -186,6 +468,8 @@ export default function QuickCapturePage() {
     }
     setRelCat((capture.relatedToCategory ?? "") as CaptureRelatedTo | "");
     setRelVal(capture.relatedToValue ?? "");
+    setAttachments(capture.attachments ? [...capture.attachments] : []);
+    setUploadError(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -266,22 +550,43 @@ export default function QuickCapturePage() {
   }
 
   function ActionButtons({ capture }: { capture: Capture }) {
+    const count = capture.attachments?.length ?? 0;
     return (
-      <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity flex-shrink-0">
-        <button
-          onClick={() => handleEdit(capture)}
-          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
-          aria-label="Edit"
-        >
-          <Edit2 className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => deleteCapture(capture.id)}
-          className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
-          aria-label="Delete"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {count > 0 && (
+          <button
+            onClick={() => setViewingCaptureId(capture.id)}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            aria-label={`${count} attachment${count !== 1 ? "s" : ""}`}
+            title={`${count} attachment${count !== 1 ? "s" : ""} — click to view`}
+          >
+            <Paperclip className="w-3 h-3" />
+            {count}
+          </button>
+        )}
+        <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+          <button
+            onClick={() => handleEdit(capture)}
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+            aria-label="Edit"
+          >
+            <Edit2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={async () => {
+              for (const a of capture.attachments ?? []) {
+                if (a.type === "file" && a.storagePath) {
+                  await deleteCaptureFile(a.storagePath);
+                }
+              }
+              deleteCapture(capture.id);
+            }}
+            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+            aria-label="Delete"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     );
   }
@@ -820,6 +1125,79 @@ export default function QuickCapturePage() {
           )}
         </div>
 
+        {/* Attachments — applies to any capture type */}
+        <div className="mt-4 pt-3 border-t border-border space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <Paperclip className="w-3 h-3" />
+              Attachments{" "}
+              <span className="text-muted-foreground/70">({attachments.length})</span>
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={addTextAttachment}
+                className="text-[11px] px-2 py-1 rounded-md border border-border bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors flex items-center gap-1"
+              >
+                <FileText className="w-3 h-3" />
+                Note
+              </button>
+              <button
+                type="button"
+                onClick={addLinkAttachment}
+                className="text-[11px] px-2 py-1 rounded-md border border-border bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors flex items-center gap-1"
+              >
+                <LinkIcon className="w-3 h-3" />
+                Link
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="text-[11px] px-2 py-1 rounded-md border border-border bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors flex items-center gap-1 disabled:opacity-50"
+              >
+                {uploading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Upload className="w-3 h-3" />
+                )}
+                {uploading ? "Uploading…" : "File"}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          {uploadError && (
+            <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">
+              {uploadError}
+            </div>
+          )}
+
+          {attachments.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground/60 italic">
+              Add long notes, links, PDFs or images you want to keep with this capture.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {attachments.map((a) => (
+                <AttachmentEditor
+                  key={a.id}
+                  attachment={a}
+                  onChange={(patch) => updateAttachment(a.id, patch)}
+                  onRemove={() => removeAttachment(a.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
           <span className="text-xs text-muted-foreground">
             {mode === "quick" ? "Ctrl + Enter to capture" : "Click Save when ready"}
@@ -953,6 +1331,246 @@ export default function QuickCapturePage() {
 
       {/* Captures list */}
       {renderList()}
+
+      {/* View attachments modal */}
+      {viewingCaptureId &&
+        (() => {
+          const cap = captures.find((c) => c.id === viewingCaptureId);
+          if (!cap) return null;
+          const list = cap.attachments ?? [];
+          const heading = cap.title ?? cap.description ?? cap.content ?? "Capture";
+          return (
+            <div
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              onClick={() => setViewingCaptureId(null)}
+            >
+              <div
+                className="bg-card rounded-lg max-w-2xl w-full p-6 max-h-[85vh] overflow-y-auto shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between mb-4 gap-3">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    {cap.emoji && (
+                      <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-xl flex-shrink-0">
+                        {cap.emoji}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-lg font-semibold text-foreground break-words">
+                        {heading}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatTime(cap.createdAt)}
+                        {cap.timeframe && ` · ${cap.timeframe}`}
+                        {cap.reminderDate && ` · due ${formatDate(cap.reminderDate)}`}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setViewingCaptureId(null)}
+                    className="p-1.5 rounded hover:bg-secondary text-muted-foreground flex-shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {cap.description && cap.type !== "quick" && (
+                  <div className="mb-4 p-3 bg-secondary/40 rounded-md text-sm whitespace-pre-wrap text-foreground/90">
+                    {cap.description}
+                  </div>
+                )}
+
+                <div className="mb-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Attachments ({list.length})
+                  </p>
+                </div>
+
+                {list.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No attachments yet.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {list.map((a) => (
+                      <AttachmentViewer key={a.id} attachment={a} />
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-5 pt-4 border-t border-border flex justify-end gap-2">
+                  <Button
+                    onClick={() => setViewingCaptureId(null)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setViewingCaptureId(null);
+                      handleEdit(cap);
+                    }}
+                    size="sm"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 mr-1" />
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+    </div>
+  );
+}
+
+function AttachmentViewer({ attachment }: { attachment: CaptureAttachment }) {
+  const a = attachment;
+
+  if (a.type === "text") {
+    return (
+      <div className="border border-border rounded-md bg-background overflow-hidden">
+        <div className="px-3 py-2 bg-secondary/40 border-b border-border flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium">{a.title || "Note"}</span>
+        </div>
+        <div className="p-3 text-sm whitespace-pre-wrap break-words text-foreground/90">
+          {a.content || (
+            <span className="text-muted-foreground italic">Empty note</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (a.type === "link") {
+    const domain = getDomain(a.content);
+    if (a.youtubeId && a.thumbnail) {
+      return (
+        <a
+          href={a.content}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block border border-border rounded-md overflow-hidden hover:border-foreground/30 transition-colors group"
+        >
+          <div className="relative h-40 bg-secondary">
+            <img
+              src={a.thumbnail}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute top-2 left-2 flex items-center gap-1 text-[11px] bg-black/70 text-white px-1.5 py-0.5 rounded">
+              <Youtube className="w-3 h-3" />
+              YouTube
+            </div>
+          </div>
+          <div className="p-2.5 flex items-center justify-between gap-2 bg-background">
+            <span className="text-xs truncate">
+              {a.title || a.content}
+            </span>
+            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground flex-shrink-0" />
+          </div>
+        </a>
+      );
+    }
+    return (
+      <a
+        href={a.content}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-3 border border-border rounded-md p-3 bg-background hover:border-foreground/30 transition-colors group"
+      >
+        {domain ? (
+          <img
+            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+            alt=""
+            className="w-8 h-8 rounded bg-secondary p-1 flex-shrink-0"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center flex-shrink-0">
+            <LinkIcon className="w-4 h-4 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          {a.title && (
+            <p className="text-xs font-medium truncate text-foreground">{a.title}</p>
+          )}
+          <p className="text-[11px] text-muted-foreground truncate">
+            {domain || a.content}
+          </p>
+        </div>
+        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground flex-shrink-0" />
+      </a>
+    );
+  }
+
+  // file
+  const fileIsImage = isImageType(a.fileType);
+  const fileIsPdf = isPdfType(a.fileType);
+
+  if (fileIsImage) {
+    return (
+      <div className="border border-border rounded-md overflow-hidden bg-background">
+        <a href={a.content} target="_blank" rel="noopener noreferrer" className="block">
+          <img
+            src={a.content}
+            alt={a.fileName ?? ""}
+            className="w-full max-h-80 object-contain bg-secondary/40"
+          />
+        </a>
+        <div className="p-2.5 flex items-center justify-between gap-2 border-t border-border">
+          <div className="min-w-0">
+            <p className="text-xs font-medium truncate">{a.fileName ?? "Image"}</p>
+            <p className="text-[11px] text-muted-foreground">{formatFileSize(a.fileSize)}</p>
+          </div>
+          <a
+            href={a.content}
+            download={a.fileName}
+            className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+            aria-label="Download"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 border border-border rounded-md p-3 bg-background">
+      <div
+        className={cn(
+          "w-12 h-12 rounded flex items-center justify-center flex-shrink-0",
+          fileIsPdf ? "bg-rose-50 text-rose-600" : "bg-secondary text-muted-foreground"
+        )}
+      >
+        <FileText className="w-6 h-6" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium truncate">{a.fileName ?? "File"}</p>
+        <p className="text-[11px] text-muted-foreground">
+          {formatFileSize(a.fileSize)}
+          {a.fileType && ` · ${a.fileType}`}
+        </p>
+      </div>
+      <a
+        href={a.content}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+        aria-label="Open"
+      >
+        <ExternalLink className="w-3.5 h-3.5" />
+      </a>
+      <a
+        href={a.content}
+        download={a.fileName}
+        className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+        aria-label="Download"
+      >
+        <Download className="w-3.5 h-3.5" />
+      </a>
     </div>
   );
 }

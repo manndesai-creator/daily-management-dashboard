@@ -33,6 +33,28 @@ export type CaptureType = "quick" | "idea" | "reminder";
 export type CaptureTimeframe = "1-2 weeks" | "2-3 weeks" | "after a month";
 export type CaptureRelatedTo = "client" | "agency" | "learning" | "other";
 
+export type CaptureAttachmentType = "text" | "link" | "file";
+
+export interface CaptureAttachment {
+  id: string;
+  type: CaptureAttachmentType;
+  // For "text": the note body
+  // For "link": the URL
+  // For "file": the public URL from Supabase Storage
+  content: string;
+  // Optional label for the attachment (e.g. note heading, link label, file display name)
+  title?: string;
+  // file-specific
+  fileName?: string;
+  fileSize?: number;
+  fileType?: string;
+  storagePath?: string;
+  // link-specific cached metadata
+  youtubeId?: string;
+  thumbnail?: string;
+  createdAt: string;
+}
+
 export interface Capture {
   id: string;
   content: string;
@@ -44,6 +66,7 @@ export interface Capture {
   reminderDate?: string;
   relatedToCategory?: CaptureRelatedTo;
   relatedToValue?: string;
+  attachments?: CaptureAttachment[];
   createdAt: string;
   processed: boolean;
 }
