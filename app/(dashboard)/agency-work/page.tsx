@@ -450,7 +450,6 @@ export default function AgencyWorkPage() {
                       )}
                       style={active ? { backgroundColor: `${hex}22`, color: hex } : undefined}
                     >
-                      <span>{AGENCY_TYPE_EMOJI[t]}</span>
                       {t}
                     </button>
                   );

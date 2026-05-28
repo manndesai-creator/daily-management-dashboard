@@ -530,7 +530,6 @@ export default function QuickCapturePage() {
       // simpler: just use a fixed blue chip for client; we'll show the actual client name
       hex = "#3b82f6";
     } else if (cat === "agency") {
-      emoji = AGENCY_TYPE_EMOJI[capture.relatedToValue ?? "Others"] ?? "🔧";
       hex = AGENCY_TYPE_HEX[capture.relatedToValue ?? "Others"] ?? RELATED_HEX.agency;
     } else if (cat === "learning") {
       hex = RELATED_HEX.learning;
@@ -553,7 +552,7 @@ export default function QuickCapturePage() {
   function ActionButtons({ capture }: { capture: Capture }) {
     const count = capture.attachments?.length ?? 0;
     return (
-      <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center items-end gap-0.5 sm:gap-1 flex-shrink-0">
         {count > 0 && (
           <button
             onClick={() => setViewingCaptureId(capture.id)}
@@ -565,7 +564,7 @@ export default function QuickCapturePage() {
             {count}
           </button>
         )}
-        <div className="flex gap-0.5 sm:gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity">
+        <div className="flex flex-col sm:flex-row gap-0.5 sm:gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity">
           <button
             onClick={() => handleEdit(capture)}
             className="p-0.5 sm:p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
@@ -1100,7 +1099,7 @@ export default function QuickCapturePage() {
               <option value="">Pick an agency type…</option>
               {AGENCY_TYPES.map((t) => (
                 <option key={t} value={t}>
-                  {AGENCY_TYPE_EMOJI[t]} {t}
+                  {t}
                 </option>
               ))}
             </select>

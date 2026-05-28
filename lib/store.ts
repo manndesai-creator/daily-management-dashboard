@@ -221,7 +221,7 @@ export const AGENCY_TYPES = [
   "Shoots",
   "Hiring",
   "Team Management",
-  "SOPs, Skills and Dashboards",
+  "SOPs & Dashboards",
   "Others",
 ];
 
@@ -232,7 +232,7 @@ export const AGENCY_TYPE_HEX: Record<string, string> = {
   Shoots: "#f43f5e",
   Hiring: "#10b981",
   "Team Management": "#8b5cf6",
-  "SOPs, Skills and Dashboards": "#f59e0b",
+  "SOPs & Dashboards": "#f59e0b",
   Others: "#64748b",
 };
 
@@ -243,7 +243,7 @@ export const AGENCY_TYPE_EMOJI: Record<string, string> = {
   Shoots: "🎬",
   Hiring: "👥",
   "Team Management": "🤝",
-  "SOPs, Skills and Dashboards": "📋",
+  "SOPs & Dashboards": "📋",
   Others: "🔧",
 };
 
@@ -251,7 +251,8 @@ export function normalizeAgencyType(type: string | undefined): string {
   if (!type) return "Others";
   if (AGENCY_TYPES.includes(type)) return type;
   if (type === "Other") return "Others";
-  if (type === "SOPs") return "SOPs, Skills and Dashboards";
+  if (type === "SOPs") return "SOPs & Dashboards";
+  if (type === "SOPs, Skills and Dashboards") return "SOPs & Dashboards";
   return "Others";
 }
 
