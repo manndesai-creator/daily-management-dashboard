@@ -268,7 +268,7 @@ export default function QuickCapturePage() {
   const { captures, addCapture, updateCapture, deleteCapture, clearProcessed } = useCaptures();
   const { clients } = useClients();
   const [mode, setMode] = useState<CaptureType>("quick");
-  const [filter, setFilter] = useState<"inbox" | "ideas" | "reminders" | "processed" | "all">("inbox");
+  const [filter, setFilter] = useState<"notes" | "ideas" | "reminders" | "processed" | "all">("all");
   const [filterRelated, setFilterRelated] = useState<CaptureRelatedTo | "all">("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingCaptureId, setViewingCaptureId] = useState<string | null>(null);
@@ -499,7 +499,8 @@ export default function QuickCapturePage() {
   const ideaItems = filteredAll.filter((c) => c.type === "idea");
   const reminderItems = filteredAll.filter((c) => c.type === "reminder");
 
-  const inboxCount = filteredAll.filter((c) => !c.processed && c.type === "quick").length;
+  const notesCount = filteredAll.filter((c) => !c.processed && c.type === "quick").length;
+  const allActiveCount = filteredAll.filter((c) => !c.processed).length;
   const ideasCount = ideaItems.filter((c) => !c.processed).length;
   const remindersCount = reminderItems.filter((c) => !c.processed).length;
   const processedCount = filteredAll.filter((c) => c.processed).length;
@@ -769,10 +770,10 @@ export default function QuickCapturePage() {
   }
 
   function renderList() {
-    if (filter === "inbox") {
+    if (filter === "notes") {
       const items = quickItems.filter((c) => !c.processed);
       if (items.length === 0) {
-        return <div className="text-center py-16 text-muted-foreground text-sm">Inbox is clear.</div>;
+        return <div className="text-center py-16 text-muted-foreground text-sm">No active notes.</div>;
       }
       return <div className="space-y-2">{items.map(renderQuickCard)}</div>;
     }
@@ -825,10 +826,16 @@ export default function QuickCapturePage() {
       }
       return <div className="space-y-2">{items.map(renderCard)}</div>;
     }
-    if (filteredAll.length === 0) {
-      return <div className="text-center py-16 text-muted-foreground text-sm">Nothing here.</div>;
+    // "all" tab — everything that's still active (not yet ticked off)
+    const allActive = filteredAll.filter((c) => !c.processed);
+    if (allActive.length === 0) {
+      return (
+        <div className="text-center py-16 text-muted-foreground text-sm">
+          Nothing active. Check the Done tab to see completed captures.
+        </div>
+      );
     }
-    return <div className="space-y-2">{filteredAll.map(renderCard)}</div>;
+    return <div className="space-y-2">{allActive.map(renderCard)}</div>;
   }
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -1298,11 +1305,11 @@ export default function QuickCapturePage() {
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex gap-1.5 flex-wrap">
           {[
-            { key: "inbox", label: `Inbox (${inboxCount})` },
+            { key: "all", label: `All (${allActiveCount})` },
+            { key: "notes", label: `Notes (${notesCount})` },
             { key: "ideas", label: `Ideas (${ideasCount})` },
             { key: "reminders", label: `Reminders (${remindersCount})` },
             { key: "processed", label: `Done (${processedCount})` },
-            { key: "all", label: `All (${filteredAll.length})` },
           ].map(({ key, label }) => (
             <button
               key={key}
