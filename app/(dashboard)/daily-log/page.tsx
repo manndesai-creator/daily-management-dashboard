@@ -66,9 +66,11 @@ function TaskAvatar({ task, client }: { task: Task; client?: Client }) {
 
   if (task.category === "agency") {
     return (
-      <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
-        <Globe2 className="w-5 h-5 text-white" />
-      </div>
+      <img
+        src="/agency-logo.png"
+        alt="Varion Media"
+        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+      />
     );
   }
 

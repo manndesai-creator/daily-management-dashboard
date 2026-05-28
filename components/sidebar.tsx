@@ -100,14 +100,22 @@ function NavContent({
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      "w-4 h-4 flex-shrink-0",
-                      isActive
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground group-hover:text-foreground"
-                    )}
-                  />
+                  {item.href === "/agency-work" ? (
+                    <img
+                      src="/agency-logo.png"
+                      alt=""
+                      className="w-4 h-4 rounded-sm object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 flex-shrink-0",
+                        isActive
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground group-hover:text-foreground"
+                      )}
+                    />
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate leading-tight">{item.label}</p>
                     <p
