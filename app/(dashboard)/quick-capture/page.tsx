@@ -553,11 +553,11 @@ export default function QuickCapturePage() {
   function ActionButtons({ capture }: { capture: Capture }) {
     const count = capture.attachments?.length ?? 0;
     return (
-      <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
         {count > 0 && (
           <button
             onClick={() => setViewingCaptureId(capture.id)}
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            className="flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
             aria-label={`${count} attachment${count !== 1 ? "s" : ""}`}
             title={`${count} attachment${count !== 1 ? "s" : ""} — click to view`}
           >
@@ -565,13 +565,13 @@ export default function QuickCapturePage() {
             {count}
           </button>
         )}
-        <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+        <div className="flex gap-0.5 sm:gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity">
           <button
             onClick={() => handleEdit(capture)}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+            className="p-0.5 sm:p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
             aria-label="Edit"
           >
-            <Edit2 className="w-3.5 h-3.5" />
+            <Edit2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
           <button
             onClick={async () => {
@@ -582,10 +582,10 @@ export default function QuickCapturePage() {
               }
               deleteCapture(capture.id);
             }}
-            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+            className="p-0.5 sm:p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
             aria-label="Delete"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
         </div>
       </div>
@@ -597,7 +597,7 @@ export default function QuickCapturePage() {
       <div
         key={capture.id}
         className={cn(
-          "flex items-start gap-3 p-3 rounded-lg border bg-card group",
+          "flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border bg-card group",
           capture.processed && "opacity-60"
         )}
       >
@@ -639,7 +639,7 @@ export default function QuickCapturePage() {
       <div
         key={capture.id}
         className={cn(
-          "flex items-start gap-3 p-3 rounded-lg border bg-card group",
+          "flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border bg-card group",
           capture.processed && "opacity-60"
         )}
       >
@@ -654,7 +654,7 @@ export default function QuickCapturePage() {
         >
           {capture.processed && <Check className="w-2.5 h-2.5 text-white" />}
         </button>
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary text-xl flex-shrink-0">
+        <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-secondary text-lg sm:text-xl flex-shrink-0">
           {capture.emoji ?? "💡"}
         </div>
         <div className="flex-1 min-w-0">
@@ -715,7 +715,7 @@ export default function QuickCapturePage() {
       <div
         key={capture.id}
         className={cn(
-          "flex items-start gap-3 p-3 rounded-lg border bg-card group",
+          "flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border bg-card group",
           capture.processed && "opacity-60"
         )}
       >
@@ -730,7 +730,7 @@ export default function QuickCapturePage() {
         >
           {capture.processed && <Check className="w-2.5 h-2.5 text-white" />}
         </button>
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary text-xl flex-shrink-0">
+        <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-secondary text-lg sm:text-xl flex-shrink-0">
           {capture.emoji ?? "🔔"}
         </div>
         <div className="flex-1 min-w-0">
