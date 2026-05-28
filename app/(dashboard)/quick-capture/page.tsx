@@ -10,7 +10,6 @@ import {
   CaptureRelatedTo,
   AGENCY_TYPES,
   AGENCY_TYPE_HEX,
-  AGENCY_TYPE_EMOJI,
   getClientColor,
   generateId,
   today,
@@ -511,7 +510,6 @@ export default function QuickCapturePage() {
     if (!capture.relatedToCategory) return null;
     const cat = capture.relatedToCategory;
     let label = capture.relatedToValue ?? "";
-    let emoji = "";
     let hex = RELATED_HEX[cat];
 
     if (cat === "client") {
@@ -543,7 +541,6 @@ export default function QuickCapturePage() {
         style={{ backgroundColor: `${hex}1f`, color: hex }}
         title={`Related to: ${RELATED_LABEL[cat]} — ${label || ""}`}
       >
-        {emoji && <span>{emoji}</span>}
         <span>{label || RELATED_LABEL[cat]}</span>
       </span>
     );
