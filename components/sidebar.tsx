@@ -139,11 +139,17 @@ function NavContent({
 
       {/* Footer */}
       <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
-          <p className="text-xs text-muted-foreground truncate">
-            v1.0 · Supabase
-          </p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+            <p className="text-xs text-muted-foreground truncate">v1.0 · Supabase</p>
+          </div>
+          <span
+            className="text-[10px] font-medium text-muted-foreground/80 px-1.5 py-0.5 rounded bg-secondary/60"
+            title="All dates use Asia / Kolkata (IST)"
+          >
+            IST
+          </span>
         </div>
       </div>
     </>

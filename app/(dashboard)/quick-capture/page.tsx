@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useCaptures, useClients } from "@/lib/db";
 import { useEscapeClose } from "@/lib/use-escape-close";
+import { useAutoSize } from "@/lib/use-autosize";
 import {
   Capture,
   CaptureAttachment,
@@ -24,6 +25,7 @@ import {
   isPdfType,
   formatFileSize,
 } from "@/lib/storage";
+import { readableOnTint, tintedBg } from "@/lib/contrast";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -277,10 +279,13 @@ export default function QuickCapturePage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEscapeClose(viewingCaptureId !== null, () => setViewingCaptureId(null));
+
+  const quickTextRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state (per-mode)
   const [quickInput, setQuickInput] = useState("");
+  useAutoSize(quickTextRef, quickInput);
   const [ideaTitle, setIdeaTitle] = useState("");
   const [ideaDesc, setIdeaDesc] = useState("");
   const [ideaEmoji, setIdeaEmoji] = useState("💡");
@@ -561,7 +566,7 @@ export default function QuickCapturePage() {
     return (
       <span
         className="text-[10px] font-medium px-1.5 py-0.5 rounded-full inline-flex items-center gap-1"
-        style={{ backgroundColor: `${hex}1f`, color: hex }}
+        style={{ backgroundColor: tintedBg(hex), color: readableOnTint(hex) }}
         title={`Related to: ${RELATED_LABEL[cat]} — ${label || ""}`}
       >
         <span>{label || RELATED_LABEL[cat]}</span>
@@ -928,7 +933,7 @@ export default function QuickCapturePage() {
       >
         {editingId && (
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold">Editing capture</h3>
+            <h2 className="text-sm font-semibold">Editing capture</h2>
             <button
               onClick={handleCancelEdit}
               className="p-1 rounded hover:bg-secondary text-muted-foreground"
@@ -942,6 +947,7 @@ export default function QuickCapturePage() {
         {mode === "quick" && (
           <>
             <textarea
+              ref={quickTextRef}
               autoFocus
               placeholder="What's on your mind? Paste a link, jot an idea, note a task, anything..."
               value={quickInput}

@@ -24,6 +24,7 @@ import {
   extractYouTubeId,
 } from "@/lib/store";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   Plus, ChevronLeft, ChevronRight, Check, Trash2, Clock,
@@ -156,7 +157,7 @@ function DailyLogContent() {
   const router = useRouter();
   const dateParam = searchParams.get("date");
 
-  const { tasks, addTask, updateTask, deleteTask } = useTasks();
+  const { tasks, addTask, updateTask, deleteTask, loading: tasksLoading } = useTasks();
   const { clients } = useClients();
   const { resources, updateResource } = useResources();
 
@@ -844,7 +845,7 @@ function DailyLogContent() {
 
           {showForm && !editingId && (
             <div className="mb-5 p-4 bg-card border border-border rounded-lg shadow-sm">
-              <h3 className="text-sm font-semibold mb-3">New Task</h3>
+              <h2 className="text-sm font-semibold mb-3">New Task</h2>
               {formBody}
             </div>
           )}
@@ -884,7 +885,23 @@ function DailyLogContent() {
           </div>
 
           {/* Task & resource list */}
-          {filteredTasks.length === 0 && filteredResources.length === 0 && carryOverTasks.length === 0 && carryOverResources.length === 0 ? (
+          {tasksLoading && tasks.length === 0 ? (
+            <div className="space-y-2" aria-label="Loading tasks">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                >
+                  <Skeleton className="w-4 h-4 rounded-sm" />
+                  <Skeleton className="w-10 h-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3 w-2/3" />
+                    <Skeleton className="h-2 w-1/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredTasks.length === 0 && filteredResources.length === 0 && carryOverTasks.length === 0 && carryOverResources.length === 0 ? (
             <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
               <p className="text-sm font-medium text-foreground">
                 Your day starts here.

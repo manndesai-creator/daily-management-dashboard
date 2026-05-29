@@ -394,7 +394,7 @@ export default function ClientsPage() {
       {/* New client form (only when explicitly creating) */}
       {showNewForm && !editingId && (
         <div className="mb-6 p-4 bg-card border border-border rounded-lg shadow-sm">
-          <h3 className="text-sm font-semibold mb-4">New Client</h3>
+          <h2 className="text-sm font-semibold mb-4">New Client</h2>
           {formBody}
         </div>
       )}

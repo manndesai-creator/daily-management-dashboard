@@ -21,6 +21,7 @@ import {
   formatDisplayDate,
 } from "@/lib/store";
 import { Button } from "@/components/ui/button";
+import { readableOnTint, tintedBg } from "@/lib/contrast";
 import { cn } from "@/lib/utils";
 import {
   Plus, Trash2, Check, X, Edit2, AlertTriangle, Calendar as CalendarIcon,
@@ -302,7 +303,7 @@ export default function AgencyWorkPage() {
             </p>
             <span
               className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-              style={{ backgroundColor: `${tHex}1f`, color: tHex }}
+              style={{ backgroundColor: tintedBg(tHex), color: readableOnTint(tHex) }}
             >
               {type}
             </span>
@@ -417,9 +418,9 @@ export default function AgencyWorkPage() {
       {/* Add / edit form */}
       {showForm && (
         <div className="mb-6 p-4 bg-card border border-border rounded-lg shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">
+          <h2 className="text-sm font-semibold mb-3">
             {editingId ? "Edit Agency Task" : "New Agency Task"}
-          </h3>
+          </h2>
           <div className="space-y-3">
             <input
               autoFocus
