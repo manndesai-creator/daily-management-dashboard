@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { useTasks } from "@/lib/db";
 import { useEscapeClose } from "@/lib/use-escape-close";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Task,
   AGENCY_TYPES,
@@ -59,7 +60,7 @@ function dateHeading(dateStr: string, todayStr: string): string {
 }
 
 export default function AgencyWorkPage() {
-  const { tasks, addTask, updateTask, deleteTask } = useTasks();
+  const { tasks, addTask, updateTask, deleteTask, loading: tasksLoading } = useTasks();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -351,7 +352,7 @@ export default function AgencyWorkPage() {
           <button
             onClick={() => (isEditing ? handleCancelForm() : handleEdit(task))}
             className={cn(
-              "p-1 rounded transition-colors",
+              "tap-target p-1 rounded transition-colors",
               isEditing
                 ? "bg-primary/10 text-primary"
                 : "hover:bg-secondary text-muted-foreground hover:text-foreground"
@@ -362,7 +363,7 @@ export default function AgencyWorkPage() {
           </button>
           <button
             onClick={() => deleteTask(task.id)}
-            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground transition-colors"
+            className="tap-target p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground transition-colors"
             aria-label="Delete"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -563,7 +564,23 @@ export default function AgencyWorkPage() {
       {/* This Week */}
       {activeView === "this-week" && (
         <section className="mb-7">
-          {thisWeekTasks.length === 0 ? (
+          {tasksLoading && tasks.length === 0 ? (
+            <div className="space-y-2" aria-label="Loading agency tasks">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 p-3 rounded-lg border bg-card"
+                >
+                  <Skeleton className="mt-1 w-4 h-4 rounded-sm" />
+                  <Skeleton className="w-10 h-10 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3 w-3/5" />
+                    <Skeleton className="h-2 w-2/5" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : thisWeekTasks.length === 0 ? (
             <div className="border border-dashed border-border bg-card/40 rounded-lg p-8 text-center">
               <p className="text-sm font-medium text-foreground">
                 All clear for this week.
@@ -793,7 +810,7 @@ export default function AgencyWorkPage() {
                   </div>
                   <button
                     onClick={() => setClickedDate(null)}
-                    className="p-1.5 rounded hover:bg-secondary text-muted-foreground"
+                    className="tap-target p-1.5 rounded hover:bg-secondary text-muted-foreground"
                   >
                     <X className="w-4 h-4" />
                   </button>

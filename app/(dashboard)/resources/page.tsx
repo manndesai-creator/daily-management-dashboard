@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { useResources } from "@/lib/db";
 import { useEscapeClose } from "@/lib/use-escape-close";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Resource, generateId, extractYouTubeId, today, addDays } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -141,7 +142,7 @@ const emptyForm = {
 };
 
 export default function LearningPage() {
-  const { resources, addResource, updateResource, deleteResource } = useResources();
+  const { resources, addResource, updateResource, deleteResource, loading: resourcesLoading } = useResources();
   const [showNewForm, setShowNewForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<StatusKey | "all">("all");
@@ -421,7 +422,7 @@ export default function LearningPage() {
                 href={resource.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+                className="tap-target p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
                 aria-label="Open link"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -429,7 +430,7 @@ export default function LearningPage() {
               <button
                 onClick={() => (isEditing ? handleCancel() : handleEdit(resource))}
                 className={cn(
-                  "p-1 rounded transition-colors",
+                  "tap-target p-1 rounded transition-colors",
                   isEditing
                     ? "bg-primary/10 text-primary"
                     : "hover:bg-secondary text-muted-foreground hover:text-foreground"
@@ -440,7 +441,7 @@ export default function LearningPage() {
               </button>
               <button
                 onClick={() => handleDeleteResource(resource.id)}
-                className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+                className="tap-target p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
                 aria-label="Delete resource"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -589,7 +590,23 @@ export default function LearningPage() {
       </div>
 
       {/* Category-grouped resources */}
-      {filtered.length === 0 ? (
+      {resourcesLoading && resources.length === 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-card border border-border rounded-lg overflow-hidden"
+            >
+              <Skeleton className="h-36 w-full rounded-none" />
+              <div className="p-3 space-y-2">
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-2 w-1/2" />
+                <Skeleton className="h-7 w-full mt-2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
           {resources.length === 0 ? (
             <>
@@ -837,7 +854,7 @@ export default function LearningPage() {
                   </div>
                   <button
                     onClick={() => setClickedDate(null)}
-                    className="p-1.5 rounded hover:bg-secondary text-muted-foreground"
+                    className="tap-target p-1.5 rounded hover:bg-secondary text-muted-foreground"
                   >
                     <X className="w-4 h-4" />
                   </button>

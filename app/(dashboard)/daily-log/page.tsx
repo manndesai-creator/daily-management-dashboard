@@ -658,7 +658,7 @@ function DailyLogContent() {
               <button
                 onClick={() => (isEditing ? handleCancelForm() : handleEditTask(task))}
                 className={cn(
-                  "p-1 rounded transition-colors",
+                  "tap-target p-1 rounded transition-colors",
                   isEditing
                     ? "bg-primary/10 text-primary"
                     : "hover:bg-secondary text-muted-foreground hover:text-foreground"
@@ -669,7 +669,7 @@ function DailyLogContent() {
               </button>
               <button
                 onClick={() => handleDeleteTask(task)}
-                className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground transition-colors"
+                className="tap-target p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground transition-colors"
                 aria-label="Delete task"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -759,7 +759,7 @@ function DailyLogContent() {
                 <button
                   type="button"
                   onClick={() => setCurrentDate(addDays(currentDate, -1))}
-                  className="w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center hover:bg-secondary hover:border-foreground/40 transition-colors"
+                  className="tap-target w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center hover:bg-secondary hover:border-foreground/40 transition-colors"
                   aria-label="Previous day"
                 >
                   <ChevronLeft className="w-4 h-4 text-foreground" />
@@ -784,7 +784,7 @@ function DailyLogContent() {
                 <button
                   type="button"
                   onClick={() => setCurrentDate(addDays(currentDate, 1))}
-                  className="w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center hover:bg-secondary hover:border-foreground/40 transition-colors"
+                  className="tap-target w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center hover:bg-secondary hover:border-foreground/40 transition-colors"
                   aria-label="Next day"
                 >
                   <ChevronRight className="w-4 h-4 text-foreground" />

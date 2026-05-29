@@ -3,6 +3,15 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "./supabase";
 import { Client, Task, Capture, Resource, Goal, today } from "./store";
+import { pushAppError } from "./app-errors";
+
+function reportError(scope: string, error: unknown, fallback?: string) {
+  const message =
+    (error as { message?: string } | null)?.message ?? fallback ?? "Unexpected error";
+  // Console keeps the developer signal; the bus pushes to the in-app toast.
+  console.error(`${scope}:`, error);
+  pushAppError(scope, message);
+}
 
 // ─── Row → TypeScript mappers ──────────────────────────────────────────────
 
@@ -265,7 +274,7 @@ export function useClients() {
       .select("*")
       .order("created_at", { ascending: true })
       .then(({ data, error }) => {
-        if (error) console.error("useClients fetch error:", error);
+        if (error) reportError("useClients fetch", error);
         if (data) setClients(data.map(mapClient));
         setLoading(false);
       });
@@ -282,7 +291,7 @@ export function useClients() {
       niche: client.niche,
       notes: client.notes,
       created_at: client.createdAt,
-    }).then(({ error }) => { if (error) console.error("addClient error:", error); });
+    }).then(({ error }) => { if (error) reportError("addClient", error); });
   }, []);
 
   const updateClient = useCallback((id: string, updates: Partial<Client>) => {
@@ -302,13 +311,13 @@ export function useClients() {
     if (updates.notes !== undefined) db.notes = updates.notes;
 
     supabase.from("clients").update(db).eq("id", id)
-      .then(({ error }) => { if (error) console.error("updateClient error:", error); });
+      .then(({ error }) => { if (error) reportError("updateClient", error); });
   }, []);
 
   const deleteClient = useCallback((id: string) => {
     setClients((prev) => prev.filter((c) => c.id !== id));
     supabase.from("clients").delete().eq("id", id)
-      .then(({ error }) => { if (error) console.error("deleteClient error:", error); });
+      .then(({ error }) => { if (error) reportError("deleteClient", error); });
   }, []);
 
   return { clients, loading, addClient, updateClient, deleteClient };
@@ -329,7 +338,7 @@ export function useTasks() {
       .select("*")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
-        if (error) console.error("useTasks fetch error:", error);
+        if (error) reportError("useTasks fetch", error);
         if (data) setTasks(data.map(mapTask));
         setLoading(false);
       });
@@ -364,9 +373,7 @@ export function useTasks() {
     );
     if (packedNotes) row.notes = packedNotes;
     supabase.from("tasks").insert(row).then(({ error }) => {
-      if (error) {
-        console.error("addTask error:", error.message, error.code, error);
-      }
+      if (error) reportError("addTask", error);
     });
   }, []);
 
@@ -409,13 +416,13 @@ export function useTasks() {
     }
 
     supabase.from("tasks").update(db).eq("id", id)
-      .then(({ error }) => { if (error) console.error("updateTask error:", error); });
+      .then(({ error }) => { if (error) reportError("updateTask", error); });
   }, []);
 
   const deleteTask = useCallback((id: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== id));
     supabase.from("tasks").delete().eq("id", id)
-      .then(({ error }) => { if (error) console.error("deleteTask error:", error); });
+      .then(({ error }) => { if (error) reportError("deleteTask", error); });
   }, []);
 
   return { tasks, loading, addTask, updateTask, deleteTask };
@@ -431,7 +438,7 @@ export function useCaptures() {
       .select("*")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
-        if (error) console.error("useCaptures fetch error:", error);
+        if (error) reportError("useCaptures fetch", error);
         if (data) setCaptures(data.map(mapCapture));
         setLoading(false);
       });
@@ -446,7 +453,7 @@ export function useCaptures() {
       content: packed,
       processed: stored.processed,
       created_at: stored.createdAt,
-    }).then(({ error }) => { if (error) console.error("addCapture error:", error); });
+    }).then(({ error }) => { if (error) reportError("addCapture", error); });
   }, []);
 
   const updateCapture = useCallback((id: string, updates: Partial<Capture>) => {
@@ -494,19 +501,19 @@ export function useCaptures() {
     }
 
     supabase.from("captures").update(db).eq("id", id)
-      .then(({ error }) => { if (error) console.error("updateCapture error:", error); });
+      .then(({ error }) => { if (error) reportError("updateCapture", error); });
   }, [captures]);
 
   const deleteCapture = useCallback((id: string) => {
     setCaptures((prev) => prev.filter((c) => c.id !== id));
     supabase.from("captures").delete().eq("id", id)
-      .then(({ error }) => { if (error) console.error("deleteCapture error:", error); });
+      .then(({ error }) => { if (error) reportError("deleteCapture", error); });
   }, []);
 
   const clearProcessed = useCallback(() => {
     setCaptures((prev) => prev.filter((c) => !c.processed));
     supabase.from("captures").delete().eq("processed", true)
-      .then(({ error }) => { if (error) console.error("clearProcessed error:", error); });
+      .then(({ error }) => { if (error) reportError("clearProcessed", error); });
   }, []);
 
   return { captures, loading, addCapture, updateCapture, deleteCapture, clearProcessed };
@@ -527,7 +534,7 @@ export function useResources() {
       .select("*")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
-        if (error) console.error("useResources fetch error:", error);
+        if (error) reportError("useResources fetch", error);
         if (data) setResources(data.map(mapResource));
         setLoading(false);
       });
@@ -551,7 +558,7 @@ export function useResources() {
       notes: packNotes(finalResource.notes, finalResource.completedAt),
       pinned_date: finalResource.pinnedDate ?? null,
       created_at: finalResource.createdAt,
-    }).then(({ error }) => { if (error) console.error("addResource error:", error); });
+    }).then(({ error }) => { if (error) reportError("addResource", error); });
   }, []);
 
   const updateResource = useCallback((id: string, updates: Partial<Resource>) => {
@@ -591,13 +598,13 @@ export function useResources() {
     }
 
     supabase.from("resources").update(db).eq("id", id)
-      .then(({ error }) => { if (error) console.error("updateResource error:", error); });
+      .then(({ error }) => { if (error) reportError("updateResource", error); });
   }, []);
 
   const deleteResource = useCallback((id: string) => {
     setResources((prev) => prev.filter((r) => r.id !== id));
     supabase.from("resources").delete().eq("id", id)
-      .then(({ error }) => { if (error) console.error("deleteResource error:", error); });
+      .then(({ error }) => { if (error) reportError("deleteResource", error); });
   }, []);
 
   return { resources, loading, addResource, updateResource, deleteResource };
@@ -613,7 +620,7 @@ export function useGoals() {
       .select("*")
       .order("created_at", { ascending: true })
       .then(({ data, error }) => {
-        if (error) console.error("useGoals fetch error:", error);
+        if (error) reportError("useGoals fetch", error);
         if (data) setGoals(data.map(mapGoal));
         setLoading(false);
       });
@@ -629,7 +636,7 @@ export function useGoals() {
       progress: goal.progress,
       notes: goal.notes ?? null,
       created_at: goal.createdAt,
-    }).then(({ error }) => { if (error) console.error("addGoal error:", error); });
+    }).then(({ error }) => { if (error) reportError("addGoal", error); });
   }, []);
 
   const updateGoal = useCallback((id: string, updates: Partial<Goal>) => {
@@ -639,13 +646,13 @@ export function useGoals() {
     if (updates.title !== undefined) db.title = updates.title;
     if (updates.notes !== undefined) db.notes = updates.notes ?? null;
     supabase.from("goals").update(db).eq("id", id)
-      .then(({ error }) => { if (error) console.error("updateGoal error:", error); });
+      .then(({ error }) => { if (error) reportError("updateGoal", error); });
   }, []);
 
   const deleteGoal = useCallback((id: string) => {
     setGoals((prev) => prev.filter((g) => g.id !== id));
     supabase.from("goals").delete().eq("id", id)
-      .then(({ error }) => { if (error) console.error("deleteGoal error:", error); });
+      .then(({ error }) => { if (error) reportError("deleteGoal", error); });
   }, []);
 
   return { goals, loading, addGoal, updateGoal, deleteGoal };

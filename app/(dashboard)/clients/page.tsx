@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { useClients, useTasks } from "@/lib/db";
 import { useEscapeClose } from "@/lib/use-escape-close";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Client,
   CLIENT_COLORS,
@@ -104,7 +105,7 @@ function ClientAvatar({
 }
 
 export default function ClientsPage() {
-  const { clients, addClient, updateClient, deleteClient } = useClients();
+  const { clients, addClient, updateClient, deleteClient, loading: clientsLoading } = useClients();
   const { tasks } = useTasks();
   const [showNewForm, setShowNewForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -400,7 +401,26 @@ export default function ClientsPage() {
       )}
 
       {/* Client grid */}
-      {clients.length === 0 ? (
+      {clientsLoading && clients.length === 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="bg-card border border-border rounded-lg overflow-hidden">
+              <Skeleton className="h-1.5 w-full rounded-none" />
+              <div className="p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="w-11 h-11 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3 w-2/3" />
+                    <Skeleton className="h-2 w-1/3" />
+                  </div>
+                </div>
+                <Skeleton className="h-2 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : clients.length === 0 ? (
         <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
           <p className="text-sm font-medium text-foreground">No clients yet.</p>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
@@ -448,7 +468,7 @@ export default function ClientsPage() {
                       <button
                         onClick={() => (isEditing ? handleCancel() : handleEdit(client))}
                         className={cn(
-                          "p-1.5 rounded transition-colors",
+                          "tap-target p-1.5 rounded transition-colors",
                           isEditing
                             ? "bg-primary/10 text-primary"
                             : "sm:opacity-0 sm:group-hover:opacity-100 hover:bg-secondary text-muted-foreground hover:text-foreground"
@@ -460,7 +480,7 @@ export default function ClientsPage() {
                       <button
                         onClick={() => handleDelete(client.id)}
                         className={cn(
-                          "p-1.5 rounded transition-colors",
+                          "tap-target p-1.5 rounded transition-colors",
                           isEditing
                             ? "hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
                             : "sm:opacity-0 sm:group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
@@ -760,7 +780,7 @@ export default function ClientsPage() {
                   </div>
                   <button
                     onClick={() => setClickedDate(null)}
-                    className="p-1.5 rounded hover:bg-secondary text-muted-foreground"
+                    className="tap-target p-1.5 rounded hover:bg-secondary text-muted-foreground"
                   >
                     <X className="w-4 h-4" />
                   </button>

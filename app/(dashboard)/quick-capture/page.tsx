@@ -581,7 +581,7 @@ export default function QuickCapturePage() {
         {count > 0 && (
           <button
             onClick={() => setViewingCaptureId(capture.id)}
-            className="flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            className="tap-target flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
             aria-label={`${count} attachment${count !== 1 ? "s" : ""}`}
             title={`${count} attachment${count !== 1 ? "s" : ""} — click to view`}
           >
@@ -592,7 +592,7 @@ export default function QuickCapturePage() {
         <div className="flex flex-col sm:flex-row gap-0.5 sm:gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity">
           <button
             onClick={() => handleEdit(capture)}
-            className="p-0.5 sm:p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+            className="tap-target p-0.5 sm:p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
             aria-label="Edit"
           >
             <Edit2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -606,7 +606,7 @@ export default function QuickCapturePage() {
               }
               deleteCapture(capture.id);
             }}
-            className="p-0.5 sm:p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+            className="tap-target p-0.5 sm:p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
             aria-label="Delete"
           >
             <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
