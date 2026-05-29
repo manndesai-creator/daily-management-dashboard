@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, CartesianGrid,
 } from "recharts";
+import { CHART_TOOLTIP_STYLE_COMPACT, CHART_TICK_FILL, CHART_GRID_STROKE } from "@/lib/chart-theme";
 import { useTasks, useClients, useResources } from "@/lib/db";
 import {
   Task,
@@ -978,13 +979,7 @@ function DailyLogContent() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{
-                      fontSize: 12,
-                      borderRadius: 6,
-                      border: "1px solid hsl(240 5% 15%)",
-                      background: "hsl(240 6% 7%)",
-                      color: "hsl(0 0% 95%)",
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE_COMPACT}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -1000,27 +995,21 @@ function DailyLogContent() {
             {weekTotal > 0 ? (
               <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={dailyProgress} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
-                  <CartesianGrid stroke="hsl(240 5% 90%)" strokeDasharray="2 2" vertical={false} />
+                  <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray="2 2" vertical={false} />
                   <XAxis
                     dataKey="day"
-                    tick={{ fontSize: 10, fill: "hsl(240 5% 55%)" }}
+                    tick={{ fontSize: 10, fill: CHART_TICK_FILL }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     allowDecimals={false}
-                    tick={{ fontSize: 10, fill: "hsl(240 5% 55%)" }}
+                    tick={{ fontSize: 10, fill: CHART_TICK_FILL }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <Tooltip
-                    contentStyle={{
-                      fontSize: 12,
-                      borderRadius: 6,
-                      border: "1px solid hsl(240 5% 15%)",
-                      background: "hsl(240 6% 7%)",
-                      color: "hsl(0 0% 95%)",
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE_COMPACT}
                   />
                   <Line
                     type="monotone"

@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
+import { CHART_TOOLTIP_STYLE_COMPACT, CHART_TICK_FILL, CHART_GRID_STROKE } from "@/lib/chart-theme";
 import { useTasks, useResources } from "@/lib/db";
 import { TaskCategory, CATEGORY_META, today, addDays, getWeekStart, formatDuration } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -116,7 +117,8 @@ export default function WeeklyPage() {
           <div className="flex items-center gap-1.5 mt-1">
             <button
               onClick={() => setWeekStart(addDays(weekStart, -7))}
-              className="p-1 rounded hover:bg-secondary transition-colors"
+              className="tap-target p-1 rounded hover:bg-secondary transition-colors"
+              aria-label="Previous week"
             >
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -125,7 +127,8 @@ export default function WeeklyPage() {
             </span>
             <button
               onClick={() => setWeekStart(addDays(weekStart, 7))}
-              className="p-1 rounded hover:bg-secondary transition-colors"
+              className="tap-target p-1 rounded hover:bg-secondary transition-colors"
+              aria-label="Next week"
             >
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -306,24 +309,18 @@ export default function WeeklyPage() {
               <BarChart data={barData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <XAxis
                   dataKey="day"
-                  tick={{ fontSize: 11, fill: "hsl(240 5% 55%)" }}
+                  tick={{ fontSize: 11, fill: CHART_TICK_FILL }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fontSize: 11, fill: "hsl(240 5% 55%)" }}
+                  tick={{ fontSize: 11, fill: CHART_TICK_FILL }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip
-                  contentStyle={{
-                    fontSize: 12,
-                    borderRadius: 8,
-                    border: "1px solid hsl(240 5% 15%)",
-                    background: "hsl(240 6% 7%)",
-                    color: "hsl(0 0% 95%)",
-                  }}
+                  contentStyle={CHART_TOOLTIP_STYLE_COMPACT}
                   cursor={{ fill: "rgba(255,255,255,0.04)" }}
                 />
                 <Legend
@@ -367,13 +364,7 @@ export default function WeeklyPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{
-                      fontSize: 12,
-                      borderRadius: 8,
-                      border: "1px solid hsl(240 5% 15%)",
-                      background: "hsl(240 6% 7%)",
-                      color: "hsl(0 0% 95%)",
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE_COMPACT}
                     formatter={(value, name) => [
                       pieData.find((d) => d.name === name)?.displayValue ?? value,
                       name,
