@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { useResources } from "@/lib/db";
+import { useEscapeClose } from "@/lib/use-escape-close";
 import { Resource, generateId, extractYouTubeId, today, addDays } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -148,6 +149,8 @@ export default function LearningPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [clickedDate, setClickedDate] = useState<string | null>(null);
+
+  useEscapeClose(clickedDate !== null, () => setClickedDate(null));
 
   const youtubeId = extractYouTubeId(form.url);
 
@@ -411,7 +414,7 @@ export default function LearningPage() {
             <div
               className={cn(
                 "flex items-center gap-1 transition-opacity flex-shrink-0",
-                isEditing ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                isEditing ? "opacity-100" : "sm:opacity-0 sm:group-hover:opacity-100"
               )}
             >
               <a
@@ -587,28 +590,40 @@ export default function LearningPage() {
 
       {/* Category-grouped resources */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <p className="text-sm">
-            {resources.length === 0 ? "No resources yet." : "No matches for the current filter."}
-          </p>
+        <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
           {resources.length === 0 ? (
-            <button
-              onClick={() => setShowNewForm(true)}
-              className="mt-2 text-sm text-primary hover:underline"
-            >
-              Add your first resource
-            </button>
+            <>
+              <p className="text-sm font-medium text-foreground">
+                Nothing saved yet.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                Paste any link, video, PDF or workshop. Tag it with a source
+                and revisit it grouped by what kind of resource it is.
+              </p>
+              <button
+                onClick={() => setShowNewForm(true)}
+                className="inline-flex items-center gap-1 mt-4 text-sm font-medium text-primary hover:underline"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Save your first resource
+              </button>
+            </>
           ) : (
-            <button
-              onClick={() => {
-                setFilterCategory("all");
-                setFilterStatus("all");
-                setSearchQuery("");
-              }}
-              className="mt-2 text-sm text-primary hover:underline"
-            >
-              Clear filters
-            </button>
+            <>
+              <p className="text-sm font-medium text-foreground">
+                No matches for the current filter.
+              </p>
+              <button
+                onClick={() => {
+                  setFilterCategory("all");
+                  setFilterStatus("all");
+                  setSearchQuery("");
+                }}
+                className="mt-3 text-sm font-medium text-primary hover:underline"
+              >
+                Clear filters
+              </button>
+            </>
           )}
         </div>
       ) : (

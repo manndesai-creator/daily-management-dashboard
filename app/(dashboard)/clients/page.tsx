@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { useClients, useTasks } from "@/lib/db";
+import { useEscapeClose } from "@/lib/use-escape-close";
 import {
   Client,
   CLIENT_COLORS,
@@ -111,6 +112,8 @@ export default function ClientsPage() {
   const [clickedDate, setClickedDate] = useState<string | null>(null);
   const [chartClientId, setChartClientId] = useState<string | "all">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEscapeClose(clickedDate !== null, () => setClickedDate(null));
 
   const todayStr = today();
   const weekStart = getWeekStart(todayStr);
@@ -398,12 +401,18 @@ export default function ClientsPage() {
 
       {/* Client grid */}
       {clients.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <p className="text-sm">No clients yet.</p>
+        <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+          <p className="text-sm font-medium text-foreground">No clients yet.</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            Add the people you work for. A client carries a photo, a colour
+            and a list of work types, so tasks logged against them roll up
+            here and in the Weekly view.
+          </p>
           <button
             onClick={() => setShowNewForm(true)}
-            className="mt-2 text-sm text-primary hover:underline"
+            className="inline-flex items-center gap-1 mt-4 text-sm font-medium text-primary hover:underline"
           >
+            <Plus className="w-3.5 h-3.5" />
             Add your first client
           </button>
         </div>
@@ -442,7 +451,7 @@ export default function ClientsPage() {
                           "p-1.5 rounded transition-colors",
                           isEditing
                             ? "bg-primary/10 text-primary"
-                            : "opacity-0 group-hover:opacity-100 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                            : "sm:opacity-0 sm:group-hover:opacity-100 hover:bg-secondary text-muted-foreground hover:text-foreground"
                         )}
                         aria-label={isEditing ? "Close editor" : "Edit client"}
                       >
@@ -454,7 +463,7 @@ export default function ClientsPage() {
                           "p-1.5 rounded transition-colors",
                           isEditing
                             ? "hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
-                            : "opacity-0 group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+                            : "sm:opacity-0 sm:group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
                         )}
                         aria-label="Delete client"
                       >

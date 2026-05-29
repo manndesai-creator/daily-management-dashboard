@@ -651,7 +651,7 @@ function DailyLogContent() {
             <div
               className={cn(
                 "flex items-center gap-1 transition-all",
-                isEditing ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                isEditing ? "opacity-100" : "sm:opacity-0 sm:group-hover:opacity-100"
               )}
             >
               <button
@@ -735,7 +735,7 @@ function DailyLogContent() {
             href={resource.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-all"
+            className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-all"
             aria-label="Open link"
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -885,17 +885,24 @@ function DailyLogContent() {
 
           {/* Task & resource list */}
           {filteredTasks.length === 0 && filteredResources.length === 0 && carryOverTasks.length === 0 && carryOverResources.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <p className="text-sm">Nothing logged for this day yet.</p>
+            <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+              <p className="text-sm font-medium text-foreground">
+                Your day starts here.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                Log client work, learning, agency tasks or anything personal.
+                It all rolls up into the Weekly view automatically.
+              </p>
               <button
                 onClick={() => {
                   setEditingId(null);
                   setForm({ ...emptyForm, date: currentDate });
                   setShowForm(true);
                 }}
-                className="mt-2 text-sm text-primary hover:underline"
+                className="inline-flex items-center gap-1 mt-4 text-sm font-medium text-primary hover:underline"
               >
-                Add your first task
+                <Plus className="w-3.5 h-3.5" />
+                Add a task
               </button>
             </div>
           ) : (

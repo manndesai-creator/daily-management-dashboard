@@ -10,7 +10,6 @@ import {
   CalendarRange,
   BookOpen,
   Zap,
-  Globe2,
   Building2,
   Menu,
   X,
@@ -67,14 +66,16 @@ function NavContent({
       {/* Brand */}
       <div className="p-5 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-            <Globe2 className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <img
+            src="/agency-logo.png"
+            alt=""
+            className="w-9 h-9 rounded-lg object-cover flex-shrink-0"
+          />
           <div className="min-w-0">
             <p className="font-bold text-foreground text-sm leading-tight truncate">
-              Daily Management
+              Varion Media
             </p>
-            <p className="text-xs text-muted-foreground truncate">Dashboard</p>
+            <p className="text-xs text-muted-foreground truncate">Daily ops</p>
           </div>
         </div>
       </div>
@@ -165,10 +166,12 @@ export function Sidebar() {
           <Menu className="w-5 h-5 text-foreground" />
         </button>
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-            <Globe2 className="w-3.5 h-3.5 text-primary-foreground" />
-          </div>
-          <p className="font-bold text-foreground text-sm">Daily Management</p>
+          <img
+            src="/agency-logo.png"
+            alt=""
+            className="w-7 h-7 rounded-md object-cover"
+          />
+          <p className="font-bold text-foreground text-sm">Varion Media</p>
         </div>
       </div>
 
@@ -194,10 +197,12 @@ export function Sidebar() {
       >
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <Globe2 className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
-            <p className="font-bold text-foreground text-sm">Daily Management</p>
+            <img
+              src="/agency-logo.png"
+              alt=""
+              className="w-7 h-7 rounded-md object-cover"
+            />
+            <p className="font-bold text-foreground text-sm">Varion Media</p>
           </div>
           <button
             onClick={() => setOpen(false)}

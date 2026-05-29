@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { useTasks } from "@/lib/db";
+import { useEscapeClose } from "@/lib/use-escape-close";
 import {
   Task,
   AGENCY_TYPES,
@@ -65,6 +66,8 @@ export default function AgencyWorkPage() {
   const [activeView, setActiveView] = useState<"this-week" | "upcoming" | "done">("this-week");
   const [chartType, setChartType] = useState<string | "all">("all");
   const dateInputRef = useRef<HTMLInputElement>(null);
+
+  useEscapeClose(clickedDate !== null, () => setClickedDate(null));
 
   const emptyForm = {
     title: "",
@@ -341,7 +344,7 @@ export default function AgencyWorkPage() {
         <div
           className={cn(
             "flex items-center gap-1 transition-opacity flex-shrink-0",
-            isEditing ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            isEditing ? "opacity-100" : "sm:opacity-0 sm:group-hover:opacity-100"
           )}
         >
           <button
@@ -560,10 +563,19 @@ export default function AgencyWorkPage() {
       {activeView === "this-week" && (
         <section className="mb-7">
           {thisWeekTasks.length === 0 ? (
-            <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
-              All clear for this week.
-              <br />
-              <button onClick={handleAddClick} className="mt-2 text-primary hover:underline">
+            <div className="border border-dashed border-border bg-card/40 rounded-lg p-8 text-center">
+              <p className="text-sm font-medium text-foreground">
+                All clear for this week.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                Anything internal — outreach, branding, hiring, SOPs — goes
+                here. Overdue items will also surface in this tab.
+              </p>
+              <button
+                onClick={handleAddClick}
+                className="inline-flex items-center gap-1 mt-4 text-sm font-medium text-primary hover:underline"
+              >
+                <Plus className="w-3.5 h-3.5" />
                 Add a task
               </button>
             </div>
@@ -581,8 +593,11 @@ export default function AgencyWorkPage() {
       {activeView === "upcoming" && (
         <section className="mb-7">
           {upcomingTasks.length === 0 ? (
-            <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
-              Nothing planned beyond this week yet.
+            <div className="border border-dashed border-border bg-card/40 rounded-lg p-6 text-center">
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                Nothing planned beyond this Sunday. Tasks with a future date
+                will park here until the week they land in.
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -598,8 +613,11 @@ export default function AgencyWorkPage() {
       {activeView === "done" && (
         <section className="mb-7">
           {doneTasks.length === 0 ? (
-            <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
-              Nothing completed yet.
+            <div className="border border-dashed border-border bg-card/40 rounded-lg p-6 text-center">
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                Tasks you tick off will gather here, grouped by the day they
+                were completed. The chart below tracks the same data.
+              </p>
             </div>
           ) : (
             <div className="space-y-5">

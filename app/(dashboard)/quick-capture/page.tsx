@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useCaptures, useClients } from "@/lib/db";
+import { useEscapeClose } from "@/lib/use-escape-close";
 import {
   Capture,
   CaptureAttachment,
@@ -274,6 +275,8 @@ export default function QuickCapturePage() {
   const [attachments, setAttachments] = useState<CaptureAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  useEscapeClose(viewingCaptureId !== null, () => setViewingCaptureId(null));
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state (per-mode)
@@ -489,20 +492,40 @@ export default function QuickCapturePage() {
     }
   }
 
-  const filteredAll = captures.filter((c) => {
-    if (filterRelated === "all") return true;
-    return c.relatedToCategory === filterRelated;
-  });
+  // Filters and counts only depend on the captures list + the related-to
+  // filter. Memoising keeps form inputs from re-deriving 9 arrays on every
+  // keystroke.
+  const filteredAll = useMemo(
+    () =>
+      captures.filter((c) => {
+        if (filterRelated === "all") return true;
+        return c.relatedToCategory === filterRelated;
+      }),
+    [captures, filterRelated]
+  );
 
-  const quickItems = filteredAll.filter((c) => c.type === "quick");
-  const ideaItems = filteredAll.filter((c) => c.type === "idea");
-  const reminderItems = filteredAll.filter((c) => c.type === "reminder");
+  const { quickItems, ideaItems, reminderItems } = useMemo(
+    () => ({
+      quickItems: filteredAll.filter((c) => c.type === "quick"),
+      ideaItems: filteredAll.filter((c) => c.type === "idea"),
+      reminderItems: filteredAll.filter((c) => c.type === "reminder"),
+    }),
+    [filteredAll]
+  );
 
-  const notesCount = filteredAll.filter((c) => !c.processed && c.type === "quick").length;
-  const allActiveCount = filteredAll.filter((c) => !c.processed).length;
-  const ideasCount = ideaItems.filter((c) => !c.processed).length;
-  const remindersCount = reminderItems.filter((c) => !c.processed).length;
-  const processedCount = filteredAll.filter((c) => c.processed).length;
+  const { notesCount, allActiveCount, ideasCount, remindersCount, processedCount } =
+    useMemo(
+      () => ({
+        notesCount: filteredAll.filter(
+          (c) => !c.processed && c.type === "quick"
+        ).length,
+        allActiveCount: filteredAll.filter((c) => !c.processed).length,
+        ideasCount: ideaItems.filter((c) => !c.processed).length,
+        remindersCount: reminderItems.filter((c) => !c.processed).length,
+        processedCount: filteredAll.filter((c) => c.processed).length,
+      }),
+      [filteredAll, ideaItems, reminderItems]
+    );
 
   // ─── UI bits ───────────────────────────────────────────────────────────────
 
@@ -769,14 +792,30 @@ export default function QuickCapturePage() {
     if (filter === "notes") {
       const items = quickItems.filter((c) => !c.processed);
       if (items.length === 0) {
-        return <div className="text-center py-16 text-muted-foreground text-sm">No active notes.</div>;
+        return (
+          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+            <p className="text-sm font-medium text-foreground">No active notes.</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+              Switch to Quick note above and dump anything that&apos;s on your
+              mind. Sort it later.
+            </p>
+          </div>
+        );
       }
       return <div className="space-y-2">{items.map(renderQuickCard)}</div>;
     }
     if (filter === "ideas") {
       const active = ideaItems.filter((c) => !c.processed);
       if (active.length === 0) {
-        return <div className="text-center py-16 text-muted-foreground text-sm">No ideas yet.</div>;
+        return (
+          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+            <p className="text-sm font-medium text-foreground">No ideas yet.</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+              Pick Idea above and capture a rough thought. Tag it with a
+              timeframe so it sorts itself when you come back.
+            </p>
+          </div>
+        );
       }
       return (
         <div className="space-y-6">
@@ -807,7 +846,15 @@ export default function QuickCapturePage() {
         .filter((c) => !c.processed)
         .sort((a, b) => (a.reminderDate ?? "").localeCompare(b.reminderDate ?? ""));
       if (active.length === 0) {
-        return <div className="text-center py-16 text-muted-foreground text-sm">No reminders.</div>;
+        return (
+          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+            <p className="text-sm font-medium text-foreground">No reminders.</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+              Subscription renewals, birthdays, follow-ups. Pick Reminder
+              above and give it a date.
+            </p>
+          </div>
+        );
       }
       return <div className="space-y-2">{active.map(renderReminderCard)}</div>;
     }
