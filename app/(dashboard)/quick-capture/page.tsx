@@ -119,7 +119,7 @@ function AttachmentEditor({
           <button
             type="button"
             onClick={onRemove}
-            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+            className="tap-target p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
             aria-label="Remove note"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -159,7 +159,7 @@ function AttachmentEditor({
           <button
             type="button"
             onClick={onRemove}
-            className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+            className="tap-target p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
             aria-label="Remove link"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -222,7 +222,7 @@ function AttachmentEditor({
         <button
           type="button"
           onClick={onRemove}
-          className="p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
+          className="tap-target p-1 rounded hover:bg-rose-50 hover:text-rose-600 text-muted-foreground"
           aria-label="Remove file"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -936,7 +936,7 @@ export default function QuickCapturePage() {
             <h2 className="text-sm font-semibold">Editing capture</h2>
             <button
               onClick={handleCancelEdit}
-              className="p-1 rounded hover:bg-secondary text-muted-foreground"
+              className="tap-target p-1 rounded hover:bg-secondary text-muted-foreground"
               aria-label="Cancel edit"
             >
               <X className="w-4 h-4" />
