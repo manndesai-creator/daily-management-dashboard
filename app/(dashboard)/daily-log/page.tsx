@@ -903,7 +903,7 @@ function DailyLogContent() {
               ))}
             </div>
           ) : filteredTasks.length === 0 && filteredResources.length === 0 && carryOverTasks.length === 0 && carryOverResources.length === 0 ? (
-            <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+            <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40 emil-fade-up">
               <p className="text-sm font-medium text-foreground">
                 Your day starts here.
               </p>
@@ -1049,7 +1049,7 @@ function DailyLogContent() {
 
       {/* Undo delete toast */}
       {recentlyDeleted && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 emil-toast">
           <Trash2 className="w-4 h-4" />
           <span className="text-sm">
             Deleted &ldquo;{recentlyDeleted.title}&rdquo;

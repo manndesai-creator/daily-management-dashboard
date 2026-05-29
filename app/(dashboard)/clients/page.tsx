@@ -422,7 +422,7 @@ export default function ClientsPage() {
           ))}
         </div>
       ) : clients.length === 0 ? (
-        <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+        <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40 emil-fade-up">
           <p className="text-sm font-medium text-foreground">No clients yet.</p>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
             Add the people you work for. A client carries a photo, a colour
@@ -759,11 +759,11 @@ export default function ClientsPage() {
 
           return (
             <div
-              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 emil-modal-backdrop"
               onClick={() => setClickedDate(null)}
             >
               <div
-                className="bg-card rounded-lg max-w-xl w-full p-6 max-h-[80vh] overflow-y-auto shadow-xl"
+                className="bg-card rounded-lg max-w-xl w-full p-6 max-h-[80vh] overflow-y-auto shadow-xl emil-modal-content"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">

@@ -65,6 +65,66 @@
   }
 }
 
+/* ── Motion vocabulary ─────────────────────────────────────────────────────
+ *
+ * Emil-style: purposeful, restrained, fast. Custom easings have more punch
+ * than the built-in CSS curves. Never use ease-in for UI; it makes the
+ * interface feel sluggish exactly when the user is paying most attention.
+ *
+ * --ease-out-quart : strong ease-out for entrances and presses
+ * --ease-in-out-quart : on-screen movement, two-way state changes
+ */
+:root {
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+@keyframes emil-fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes emil-scale-fade-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes emil-backdrop-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes emil-toast-rise {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Reusable utilities. Keep durations under 300ms; the eye notices anything
+ * slower on interactive surfaces. */
+.emil-modal-backdrop {
+  animation: emil-backdrop-fade-in 200ms var(--ease-out-quart);
+}
+.emil-modal-content {
+  animation: emil-scale-fade-in 220ms var(--ease-out-quart);
+  transform-origin: center;
+}
+.emil-fade-up {
+  animation: emil-fade-up 280ms var(--ease-out-quart) backwards;
+}
+.emil-toast {
+  animation: emil-toast-rise 240ms var(--ease-out-quart);
+}
+
+/* Card affordance: hint at "you can click me" without lifting. Lift is the
+ * cliché card-grid move; a quiet border darken stays out of the way until
+ * the user is actually pointing at it. */
+.emil-card-interactive {
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+.emil-card-interactive:hover {
+  border-color: hsl(var(--foreground) / 0.18);
+}
+
 /* WCAG 2.5.5 — small icon buttons get an invisible 44 × 44 hit area via a
  * pseudo-element. Layout stays unchanged; touch users get a finger-sized
  * target. Apply to any compact button that holds a 12-16 px icon. */

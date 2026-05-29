@@ -798,7 +798,7 @@ export default function QuickCapturePage() {
       const items = quickItems.filter((c) => !c.processed);
       if (items.length === 0) {
         return (
-          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40 emil-fade-up">
             <p className="text-sm font-medium text-foreground">No active notes.</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
               Switch to Quick note above and dump anything that&apos;s on your
@@ -813,7 +813,7 @@ export default function QuickCapturePage() {
       const active = ideaItems.filter((c) => !c.processed);
       if (active.length === 0) {
         return (
-          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40 emil-fade-up">
             <p className="text-sm font-medium text-foreground">No ideas yet.</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
               Pick Idea above and capture a rough thought. Tag it with a
@@ -852,7 +852,7 @@ export default function QuickCapturePage() {
         .sort((a, b) => (a.reminderDate ?? "").localeCompare(b.reminderDate ?? ""));
       if (active.length === 0) {
         return (
-          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40">
+          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border bg-card/40 emil-fade-up">
             <p className="text-sm font-medium text-foreground">No reminders.</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
               Subscription renewals, birthdays, follow-ups. Pick Reminder
@@ -1397,11 +1397,11 @@ export default function QuickCapturePage() {
           const heading = cap.title ?? cap.description ?? cap.content ?? "Capture";
           return (
             <div
-              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 emil-modal-backdrop"
               onClick={() => setViewingCaptureId(null)}
             >
               <div
-                className="bg-card rounded-lg max-w-2xl w-full p-6 max-h-[85vh] overflow-y-auto shadow-xl"
+                className="bg-card rounded-lg max-w-2xl w-full p-6 max-h-[85vh] overflow-y-auto shadow-xl emil-modal-content"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-start justify-between mb-4 gap-3">

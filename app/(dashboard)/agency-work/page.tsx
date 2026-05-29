@@ -582,7 +582,7 @@ export default function AgencyWorkPage() {
               ))}
             </div>
           ) : thisWeekTasks.length === 0 ? (
-            <div className="border border-dashed border-border bg-card/40 rounded-lg p-8 text-center">
+            <div className="border border-dashed border-border bg-card/40 rounded-lg p-8 text-center emil-fade-up">
               <p className="text-sm font-medium text-foreground">
                 All clear for this week.
               </p>
@@ -612,7 +612,7 @@ export default function AgencyWorkPage() {
       {activeView === "upcoming" && (
         <section className="mb-7">
           {upcomingTasks.length === 0 ? (
-            <div className="border border-dashed border-border bg-card/40 rounded-lg p-6 text-center">
+            <div className="border border-dashed border-border bg-card/40 rounded-lg p-6 text-center emil-fade-up">
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">
                 Nothing planned beyond this Sunday. Tasks with a future date
                 will park here until the week they land in.
@@ -632,7 +632,7 @@ export default function AgencyWorkPage() {
       {activeView === "done" && (
         <section className="mb-7">
           {doneTasks.length === 0 ? (
-            <div className="border border-dashed border-border bg-card/40 rounded-lg p-6 text-center">
+            <div className="border border-dashed border-border bg-card/40 rounded-lg p-6 text-center emil-fade-up">
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">
                 Tasks you tick off will gather here, grouped by the day they
                 were completed. The chart below tracks the same data.
@@ -789,11 +789,11 @@ export default function AgencyWorkPage() {
 
           return (
             <div
-              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 emil-modal-backdrop"
               onClick={() => setClickedDate(null)}
             >
               <div
-                className="bg-card rounded-lg max-w-xl w-full p-6 max-h-[80vh] overflow-y-auto shadow-xl"
+                className="bg-card rounded-lg max-w-xl w-full p-6 max-h-[80vh] overflow-y-auto shadow-xl emil-modal-content"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">

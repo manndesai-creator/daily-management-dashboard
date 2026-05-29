@@ -28,7 +28,10 @@
       "Bash(node .claude/skills/impeccable/scripts/*)",
       "Bash(node \"C:\\\\Users\\\\mann\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\*\")",
       "Bash(node /c/Users/mann/.claude/skills/impeccable/scripts/*)",
-      "Read(//c/Users/mann/.claude/skills/impeccable/**)"
+      "Read(//c/Users/mann/.claude/skills/impeccable/**)",
+      "Bash(node -e ' *)",
+      "Bash(npx next *)",
+      "Bash(Select-Object -Last 14)"
     ]
   }
 }
