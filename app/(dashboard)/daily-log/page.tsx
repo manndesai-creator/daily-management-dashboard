@@ -293,6 +293,11 @@ function DailyLogContent() {
     if (editingId) {
       updateTask(editingId, { ...payload, date: form.date });
       setEditingId(null);
+      // If the date was changed, navigate to the new date so the user can see
+      // the task in its new location rather than watching it silently disappear.
+      if (form.date && form.date !== currentDate) {
+        setCurrentDate(form.date);
+      }
     } else {
       const newTask: Task = {
         id: generateId(),
