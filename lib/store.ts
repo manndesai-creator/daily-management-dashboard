@@ -263,6 +263,94 @@ export function extractYouTubeId(url: string): string | null {
   return match ? match[1] : null;
 }
 
+// ─── Fitness ───────────────────────────────────────────────────────────────
+
+export type ActivityType = "gym" | "swimming" | "running" | "cycling" | "sports" | "yoga" | "other";
+
+export const ACTIVITY_TYPE_META: Record<ActivityType, { label: string; emoji: string; color: string; bg: string; border: string }> = {
+  gym:      { label: "Gym",      emoji: "🏋️", color: "text-orange-700", bg: "bg-orange-50",  border: "border-orange-200" },
+  swimming: { label: "Swimming", emoji: "🏊", color: "text-blue-700",   bg: "bg-blue-50",    border: "border-blue-200" },
+  running:  { label: "Running",  emoji: "🏃", color: "text-emerald-700",bg: "bg-emerald-50", border: "border-emerald-200" },
+  cycling:  { label: "Cycling",  emoji: "🚴", color: "text-yellow-700", bg: "bg-yellow-50",  border: "border-yellow-200" },
+  sports:   { label: "Sports",   emoji: "⚽", color: "text-violet-700", bg: "bg-violet-50",  border: "border-violet-200" },
+  yoga:     { label: "Yoga",     emoji: "🧘", color: "text-pink-700",   bg: "bg-pink-50",    border: "border-pink-200" },
+  other:    { label: "Other",    emoji: "💪", color: "text-slate-700",  bg: "bg-slate-50",   border: "border-slate-200" },
+};
+
+export interface FitnessActivity {
+  id: string;
+  date: string;
+  type: ActivityType;
+  name: string;
+  duration?: number; // minutes
+  notes?: string;
+  createdAt: string;
+}
+
+export interface WorkoutSession {
+  id: string;
+  date: string;
+  name: string;
+  templateId?: string;
+  notes?: string;
+  durationMinutes?: number;
+  createdAt: string;
+}
+
+export interface WorkoutSet {
+  id: string;
+  sessionId: string;
+  exerciseName: string;
+  muscleGroup?: string;
+  setNumber: number;
+  weight: number; // kg
+  reps: number;
+  isWarmup?: boolean;
+  createdAt: string;
+}
+
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  exercises: string[]; // ordered list of exercise names
+  notes?: string;
+  createdAt: string;
+}
+
+export interface DailySteps {
+  id: string;
+  date: string;
+  steps: number;
+  createdAt: string;
+}
+
+export interface BodyWeightLog {
+  id: string;
+  date: string;
+  weight: number; // kg
+  notes?: string;
+  createdAt: string;
+}
+
+export const MUSCLE_GROUPS = [
+  "Chest", "Back", "Shoulders", "Biceps", "Triceps",
+  "Legs", "Glutes", "Core", "Cardio", "Full Body", "Other",
+];
+
+export const COMMON_EXERCISES: Record<string, string[]> = {
+  Chest:      ["Bench Press", "Incline Bench Press", "Decline Bench Press", "Dumbbell Fly", "Push Ups", "Cable Fly", "Chest Dips"],
+  Back:       ["Pull Ups", "Lat Pulldown", "Barbell Row", "Dumbbell Row", "Seated Cable Row", "T-Bar Row", "Face Pull", "Deadlift"],
+  Shoulders:  ["Overhead Press", "Dumbbell Shoulder Press", "Lateral Raise", "Front Raise", "Rear Delt Fly", "Arnold Press", "Upright Row"],
+  Biceps:     ["Barbell Curl", "Dumbbell Curl", "Hammer Curl", "Preacher Curl", "Cable Curl", "Concentration Curl", "Incline Dumbbell Curl"],
+  Triceps:    ["Tricep Pushdown", "Close Grip Bench Press", "Skull Crusher", "Overhead Tricep Extension", "Dips", "Diamond Push Ups", "Kickback"],
+  Legs:       ["Squat", "Leg Press", "Romanian Deadlift", "Leg Curl", "Leg Extension", "Lunges", "Calf Raise", "Bulgarian Split Squat"],
+  Glutes:     ["Hip Thrust", "Glute Bridge", "Cable Kickback", "Sumo Squat"],
+  Core:       ["Plank", "Crunches", "Leg Raise", "Russian Twist", "Ab Wheel", "Cable Crunch", "Hanging Knee Raise"],
+  Cardio:     ["Treadmill", "Elliptical", "Rowing Machine", "Stair Climber", "Jump Rope", "Stationary Bike"],
+  "Full Body":["Deadlift", "Clean and Press", "Burpees", "Kettlebell Swing", "Thruster"],
+  Other:      [],
+};
+
 export function formatDuration(minutes: number): string {
   if (!minutes) return "";
   const h = Math.floor(minutes / 60);

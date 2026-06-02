@@ -530,19 +530,6 @@ function DailyLogContent() {
 
       <div className="flex items-center gap-2 flex-wrap">
         <CalendarIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-        <button
-          type="button"
-          onClick={() => {
-            const el = formDateInputRef.current;
-            if (!el) return;
-            const anyEl = el as HTMLInputElement & { showPicker?: () => void };
-            if (typeof anyEl.showPicker === "function") anyEl.showPicker();
-            else el.focus();
-          }}
-          className="text-sm text-foreground hover:text-primary px-3 py-1.5 rounded border border-border bg-background flex-1 text-left"
-        >
-          {formatDisplayDate(form.date)}
-        </button>
         <input
           ref={formDateInputRef}
           type="date"
@@ -550,8 +537,7 @@ function DailyLogContent() {
           onChange={(e) =>
             e.target.value && setForm((p) => ({ ...p, date: e.target.value }))
           }
-          className="sr-only"
-          tabIndex={-1}
+          className="flex-1 text-sm text-foreground px-3 py-1.5 rounded border border-border bg-background cursor-pointer [color-scheme:dark]"
           aria-label="Task date"
         />
         {form.date !== currentDate && (

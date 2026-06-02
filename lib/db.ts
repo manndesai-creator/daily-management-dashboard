@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "./supabase";
-import { Client, Task, Capture, Resource, Goal, today } from "./store";
+import {
+  Client, Task, Capture, Resource, Goal, today,
+  FitnessActivity, WorkoutSession, WorkoutSet, WorkoutTemplate,
+  DailySteps, BodyWeightLog,
+} from "./store";
 import { pushAppError } from "./app-errors";
 
 function reportError(scope: string, error: unknown, fallback?: string) {
@@ -656,4 +660,324 @@ export function useGoals() {
   }, []);
 
   return { goals, loading, addGoal, updateGoal, deleteGoal };
+}
+
+// ─── Fitness Activities ────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapFitnessActivity(row: any): FitnessActivity {
+  return {
+    id: row.id,
+    date: row.date,
+    type: row.type,
+    name: row.name,
+    duration: row.duration ?? undefined,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export function useFitnessActivities() {
+  const [activities, setActivities] = useState<FitnessActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("fitness_activities").select("*")
+      .order("date", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) reportError("useFitnessActivities fetch", error);
+        if (data) setActivities(data.map(mapFitnessActivity));
+        setLoading(false);
+      });
+  }, []);
+
+  const addActivity = useCallback((a: FitnessActivity) => {
+    setActivities((prev) => [a, ...prev]);
+    supabase.from("fitness_activities").insert({
+      id: a.id, date: a.date, type: a.type, name: a.name,
+      duration: a.duration ?? null, notes: a.notes ?? null, created_at: a.createdAt,
+    }).then(({ error }) => { if (error) reportError("addFitnessActivity", error); });
+  }, []);
+
+  const updateActivity = useCallback((id: string, updates: Partial<FitnessActivity>) => {
+    setActivities((prev) => prev.map((a) => a.id === id ? { ...a, ...updates } : a));
+    const db: Record<string, unknown> = {};
+    if (updates.name !== undefined) db.name = updates.name;
+    if (updates.type !== undefined) db.type = updates.type;
+    if (updates.date !== undefined) db.date = updates.date;
+    if (updates.duration !== undefined) db.duration = updates.duration ?? null;
+    if (updates.notes !== undefined) db.notes = updates.notes ?? null;
+    supabase.from("fitness_activities").update(db).eq("id", id)
+      .then(({ error }) => { if (error) reportError("updateFitnessActivity", error); });
+  }, []);
+
+  const deleteActivity = useCallback((id: string) => {
+    setActivities((prev) => prev.filter((a) => a.id !== id));
+    supabase.from("fitness_activities").delete().eq("id", id)
+      .then(({ error }) => { if (error) reportError("deleteFitnessActivity", error); });
+  }, []);
+
+  return { activities, loading, addActivity, updateActivity, deleteActivity };
+}
+
+// ─── Workout Sessions ──────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapWorkoutSession(row: any): WorkoutSession {
+  return {
+    id: row.id,
+    date: row.date,
+    name: row.name,
+    templateId: row.template_id ?? undefined,
+    notes: row.notes ?? undefined,
+    durationMinutes: row.duration_minutes ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export function useWorkoutSessions() {
+  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("workout_sessions").select("*")
+      .order("date", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) reportError("useWorkoutSessions fetch", error);
+        if (data) setSessions(data.map(mapWorkoutSession));
+        setLoading(false);
+      });
+  }, []);
+
+  const addSession = useCallback((s: WorkoutSession) => {
+    setSessions((prev) => [s, ...prev]);
+    supabase.from("workout_sessions").insert({
+      id: s.id, date: s.date, name: s.name,
+      template_id: s.templateId ?? null,
+      notes: s.notes ?? null,
+      duration_minutes: s.durationMinutes ?? null,
+      created_at: s.createdAt,
+    }).then(({ error }) => { if (error) reportError("addWorkoutSession", error); });
+  }, []);
+
+  const updateSession = useCallback((id: string, updates: Partial<WorkoutSession>) => {
+    setSessions((prev) => prev.map((s) => s.id === id ? { ...s, ...updates } : s));
+    const db: Record<string, unknown> = {};
+    if (updates.name !== undefined) db.name = updates.name;
+    if (updates.notes !== undefined) db.notes = updates.notes ?? null;
+    if (updates.durationMinutes !== undefined) db.duration_minutes = updates.durationMinutes ?? null;
+    supabase.from("workout_sessions").update(db).eq("id", id)
+      .then(({ error }) => { if (error) reportError("updateWorkoutSession", error); });
+  }, []);
+
+  const deleteSession = useCallback((id: string) => {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    supabase.from("workout_sessions").delete().eq("id", id)
+      .then(({ error }) => { if (error) reportError("deleteWorkoutSession", error); });
+  }, []);
+
+  return { sessions, loading, addSession, updateSession, deleteSession };
+}
+
+// ─── Workout Sets ──────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapWorkoutSet(row: any): WorkoutSet {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    exerciseName: row.exercise_name,
+    muscleGroup: row.muscle_group ?? undefined,
+    setNumber: row.set_number,
+    weight: parseFloat(row.weight),
+    reps: row.reps,
+    isWarmup: row.is_warmup ?? false,
+    createdAt: row.created_at,
+  };
+}
+
+export function useWorkoutSets() {
+  const [sets, setSets] = useState<WorkoutSet[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("workout_sets").select("*")
+      .order("created_at", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) reportError("useWorkoutSets fetch", error);
+        if (data) setSets(data.map(mapWorkoutSet));
+        setLoading(false);
+      });
+  }, []);
+
+  const addSet = useCallback((s: WorkoutSet) => {
+    setSets((prev) => [...prev, s]);
+    supabase.from("workout_sets").insert({
+      id: s.id, session_id: s.sessionId, exercise_name: s.exerciseName,
+      muscle_group: s.muscleGroup ?? null, set_number: s.setNumber,
+      weight: s.weight, reps: s.reps, is_warmup: s.isWarmup ?? false,
+      created_at: s.createdAt,
+    }).then(({ error }) => { if (error) reportError("addWorkoutSet", error); });
+  }, []);
+
+  const updateSet = useCallback((id: string, updates: Partial<WorkoutSet>) => {
+    setSets((prev) => prev.map((s) => s.id === id ? { ...s, ...updates } : s));
+    const db: Record<string, unknown> = {};
+    if (updates.weight !== undefined) db.weight = updates.weight;
+    if (updates.reps !== undefined) db.reps = updates.reps;
+    if (updates.isWarmup !== undefined) db.is_warmup = updates.isWarmup;
+    supabase.from("workout_sets").update(db).eq("id", id)
+      .then(({ error }) => { if (error) reportError("updateWorkoutSet", error); });
+  }, []);
+
+  const deleteSet = useCallback((id: string) => {
+    setSets((prev) => prev.filter((s) => s.id !== id));
+    supabase.from("workout_sets").delete().eq("id", id)
+      .then(({ error }) => { if (error) reportError("deleteWorkoutSet", error); });
+  }, []);
+
+  return { sets, loading, addSet, updateSet, deleteSet };
+}
+
+// ─── Workout Templates ─────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapWorkoutTemplate(row: any): WorkoutTemplate {
+  return {
+    id: row.id,
+    name: row.name,
+    exercises: Array.isArray(row.exercises) ? row.exercises : [],
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export function useWorkoutTemplates() {
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("workout_templates").select("*")
+      .order("created_at", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) reportError("useWorkoutTemplates fetch", error);
+        if (data) setTemplates(data.map(mapWorkoutTemplate));
+        setLoading(false);
+      });
+  }, []);
+
+  const addTemplate = useCallback((t: WorkoutTemplate) => {
+    setTemplates((prev) => [...prev, t]);
+    supabase.from("workout_templates").insert({
+      id: t.id, name: t.name, exercises: t.exercises,
+      notes: t.notes ?? null, created_at: t.createdAt,
+    }).then(({ error }) => { if (error) reportError("addWorkoutTemplate", error); });
+  }, []);
+
+  const updateTemplate = useCallback((id: string, updates: Partial<WorkoutTemplate>) => {
+    setTemplates((prev) => prev.map((t) => t.id === id ? { ...t, ...updates } : t));
+    const db: Record<string, unknown> = {};
+    if (updates.name !== undefined) db.name = updates.name;
+    if (updates.exercises !== undefined) db.exercises = updates.exercises;
+    if (updates.notes !== undefined) db.notes = updates.notes ?? null;
+    supabase.from("workout_templates").update(db).eq("id", id)
+      .then(({ error }) => { if (error) reportError("updateWorkoutTemplate", error); });
+  }, []);
+
+  const deleteTemplate = useCallback((id: string) => {
+    setTemplates((prev) => prev.filter((t) => t.id !== id));
+    supabase.from("workout_templates").delete().eq("id", id)
+      .then(({ error }) => { if (error) reportError("deleteWorkoutTemplate", error); });
+  }, []);
+
+  return { templates, loading, addTemplate, updateTemplate, deleteTemplate };
+}
+
+// ─── Daily Steps ───────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapDailySteps(row: any): DailySteps {
+  return { id: row.id, date: row.date, steps: row.steps, createdAt: row.created_at };
+}
+
+export function useDailySteps() {
+  const [stepLogs, setStepLogs] = useState<DailySteps[]>([]);
+  const [loading, setLoading] = useState(true);
+  const stepLogsRef = useRef<DailySteps[]>([]);
+
+  useEffect(() => { stepLogsRef.current = stepLogs; }, [stepLogs]);
+
+  useEffect(() => {
+    supabase.from("daily_steps").select("*")
+      .order("date", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) reportError("useDailySteps fetch", error);
+        if (data) setStepLogs(data.map(mapDailySteps));
+        setLoading(false);
+      });
+  }, []);
+
+  const logSteps = useCallback((entry: DailySteps) => {
+    // Upsert by date — replace existing entry if same date
+    const existing = stepLogsRef.current.find((s) => s.date === entry.date);
+    if (existing) {
+      setStepLogs((prev) => prev.map((s) => s.date === entry.date ? { ...s, steps: entry.steps } : s));
+      supabase.from("daily_steps").update({ steps: entry.steps }).eq("id", existing.id)
+        .then(({ error }) => { if (error) reportError("logSteps update", error); });
+    } else {
+      setStepLogs((prev) => [entry, ...prev]);
+      supabase.from("daily_steps").insert({
+        id: entry.id, date: entry.date, steps: entry.steps, created_at: entry.createdAt,
+      }).then(({ error }) => { if (error) reportError("logSteps insert", error); });
+    }
+  }, []);
+
+  const deleteSteps = useCallback((id: string) => {
+    setStepLogs((prev) => prev.filter((s) => s.id !== id));
+    supabase.from("daily_steps").delete().eq("id", id)
+      .then(({ error }) => { if (error) reportError("deleteSteps", error); });
+  }, []);
+
+  return { stepLogs, loading, logSteps, deleteSteps };
+}
+
+// ─── Body Weight Logs ──────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapBodyWeightLog(row: any): BodyWeightLog {
+  return {
+    id: row.id, date: row.date, weight: parseFloat(row.weight),
+    notes: row.notes ?? undefined, createdAt: row.created_at,
+  };
+}
+
+export function useBodyWeightLogs() {
+  const [logs, setLogs] = useState<BodyWeightLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("body_weight_logs").select("*")
+      .order("date", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) reportError("useBodyWeightLogs fetch", error);
+        if (data) setLogs(data.map(mapBodyWeightLog));
+        setLoading(false);
+      });
+  }, []);
+
+  const addWeightLog = useCallback((log: BodyWeightLog) => {
+    setLogs((prev) => [log, ...prev]);
+    supabase.from("body_weight_logs").insert({
+      id: log.id, date: log.date, weight: log.weight,
+      notes: log.notes ?? null, created_at: log.createdAt,
+    }).then(({ error }) => { if (error) reportError("addWeightLog", error); });
+  }, []);
+
+  const deleteWeightLog = useCallback((id: string) => {
+    setLogs((prev) => prev.filter((l) => l.id !== id));
+    supabase.from("body_weight_logs").delete().eq("id", id)
+      .then(({ error }) => { if (error) reportError("deleteWeightLog", error); });
+  }, []);
+
+  return { logs, loading, addWeightLog, deleteWeightLog };
 }

@@ -11,6 +11,7 @@ import {
   BookOpen,
   Zap,
   Building2,
+  Dumbbell,
   Menu,
   X,
 } from "lucide-react";
@@ -51,6 +52,12 @@ const navItems = [
     href: "/quick-capture",
     icon: Zap,
     description: "Dump thoughts instantly",
+  },
+  {
+    label: "Fitness Tracker",
+    href: "/fitness-tracker",
+    icon: Dumbbell,
+    description: "Gym, steps & body stats",
   },
 ];
 
